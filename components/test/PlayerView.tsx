@@ -7,6 +7,7 @@ type PlayerViewProps = {
     promptChoice: { type: "truth" | "trick"; content: string } | null;
     promptCountdown: number | null;
     isFinishEnabled: boolean;
+    onStartGame: () => void;
     onPromptChoice: (type: "truth" | "trick", content: string) => void;
     onFinishTurn: () => void;
 };
@@ -18,6 +19,7 @@ const PlayerView = ({
     promptChoice,
     promptCountdown,
     isFinishEnabled,
+    onStartGame,
     onPromptChoice,
     onFinishTurn,
 }: PlayerViewProps) => {
@@ -28,13 +30,24 @@ const PlayerView = ({
     return (
         <section className="flex-1 rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-b from-purple-500/10 via-transparent to-blue-500/10 p-6 md:p-10 shadow-xl space-y-6">
             <header className="mb-6 text-center md:text-left">
-                <p className="text-sm uppercase tracking-widest text-purple-500">Mobile Lobby</p>
-                <h2 className="text-3xl md:text-4xl font-bold mt-2">
-                    Hey {me.data?.name ?? "Player"} 👋 Ready to play?
-                </h2>
-                <p className="mt-2 text-neutral-600 dark:text-neutral-300">
-                    Stay tuned for the host to kick things off. We&apos;ll highlight you when it&apos;s your turn.
-                </p>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <p className="text-sm uppercase tracking-widest text-purple-500">Mobile Lobby</p>
+                        <h2 className="text-3xl md:text-4xl font-bold mt-2">
+                            Hey {me.data?.name ?? "Player"} 👋 Ready to play?
+                        </h2>
+                        <p className="mt-2 text-neutral-600 dark:text-neutral-300">
+                            Stay tuned for the host to kick things off. We&apos;ll highlight you when it&apos;s your turn.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        className="rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-700 transition"
+                        onClick={onStartGame}
+                    >
+                        Bắt đầu game
+                    </button>
+                </div>
             </header>
 
             <section className="rounded-2xl border border-purple-200 dark:border-purple-700/60 bg-white dark:bg-neutral-900 p-6 shadow-inner">

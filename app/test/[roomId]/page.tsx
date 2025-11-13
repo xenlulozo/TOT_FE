@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { QRCodeSVG } from "qrcode.react";
 import HostView from "@/components/test/HostView";
 import PlayerView from "@/components/test/PlayerView";
 import { connectSocket, getSocket } from "@/lib/socketClient";
@@ -29,6 +28,7 @@ const RoomPage = () => {
     const [isFinishEnabled, setIsFinishEnabled] = useState<boolean>(false);
     const [hasJoined, setHasJoined] = useState<boolean>(false);
     const [roomUrl, setRoomUrl] = useState<string>("");
+    const [showTurnPopup, setShowTurnPopup] = useState<boolean>(false);
     const countdownTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const promptCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -195,6 +195,12 @@ const RoomPage = () => {
             setIsFinishEnabled(false);
             const playerName = payload.player.data?.name ?? payload.player.name ?? "Player";
             setLastMessage(`${playerName} has been selected to play`);
+
+            // Show popup if it's the current player's turn (only for non-host players)
+            const socket = getSocket();
+            if (payload.player.id === socket.id && !payload.player.isHost) {
+                setShowTurnPopup(true);
+            }
         };
 
         socket.on("connect", handleConnect);
@@ -291,6 +297,10 @@ const RoomPage = () => {
         }
     }, [roomId]);
 
+    const handleCloseTurnPopup = useCallback(() => {
+        setShowTurnPopup(false);
+    }, []);
+
     if (!roomId) {
         return (
             <main className="min-h-screen flex items-center justify-center">
@@ -309,23 +319,6 @@ const RoomPage = () => {
 
             {roomState && me ? (
                 <>
-                    {me.isHost && roomUrl ? (
-                        <section className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
-                            <h2 className="text-2xl font-bold mb-4">QR Code để tham gia</h2>
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="rounded-lg border-4 border-neutral-200 dark:border-neutral-700 p-4 bg-white">
-                                    <QRCodeSVG value={roomUrl} size={256} level="H" />
-                                </div>
-                                <p className="text-sm text-neutral-600 dark:text-neutral-400 break-all text-center max-w-md">
-                                    {roomUrl}
-                                </p>
-                                <p className="text-xs text-neutral-500 text-center">
-                                    Quét QR code này để tham gia phòng chơi
-                                </p>
-                            </div>
-                        </section>
-                    ) : null}
-
                     {me.isHost ? (
                         <HostView
                             roomState={roomState}
@@ -334,6 +327,7 @@ const RoomPage = () => {
                             promptChoice={promptChoice}
                             promptCountdown={promptCountdown}
                             isFinishEnabled={isFinishEnabled}
+                            roomUrl={roomUrl}
                             onStartGame={handleStartGame}
                             onFinishTurn={handleFinishTurn}
                         />
@@ -345,6 +339,7 @@ const RoomPage = () => {
                             promptChoice={promptChoice}
                             promptCountdown={promptCountdown}
                             isFinishEnabled={isFinishEnabled}
+                            onStartGame={handleStartGame}
                             onFinishTurn={handleFinishTurn}
                             onPromptChoice={handlePromptChoice}
                         />
@@ -378,6 +373,79 @@ const RoomPage = () => {
                         >
                             {countdown}
                         </motion.span>
+                    </motion.div>
+                ) : null}
+
+                {showTurnPopup ? (
+                    <motion.div
+                        key="turn-popup"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={handleCloseTurnPopup}
+                    >
+                        <motion.div
+                            className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-blue-600 rounded-3xl shadow-2xl p-8 md:p-12 max-w-md w-full mx-4 text-center"
+                            initial={{ scale: 0.5, opacity: 0, y: 50 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.8, opacity: 0, y: -20 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 25,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <motion.div
+                                className="mb-6"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{
+                                    delay: 0.2,
+                                    type: "spring",
+                                    stiffness: 200,
+                                    damping: 15,
+                                }}
+                            >
+                                <div className="w-20 h-20 md:w-24 md:h-24 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-4">
+                                    <span className="text-4xl md:text-5xl">🎯</span>
+                                </div>
+                            </motion.div>
+                            <motion.h2
+                                className="text-3xl md:text-4xl font-black text-white mb-3"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                Lượt của bạn!
+                            </motion.h2>
+                            <motion.p
+                                className="text-white/90 text-lg md:text-xl mb-6"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                            >
+                                Hãy chọn Truth hoặc Trick để bắt đầu
+                            </motion.p>
+                            <motion.button
+                                className="bg-white text-purple-700 font-bold px-6 py-3 rounded-full hover:bg-white/90 transition-colors"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.5 }}
+                                onClick={handleCloseTurnPopup}
+                            >
+                                Bắt đầu
+                            </motion.button>
+                            <motion.p
+                                className="text-white/70 text-sm mt-4"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.6 }}
+                            >
+                                (Click vào màn hình để đóng)
+                            </motion.p>
+                        </motion.div>
                     </motion.div>
                 ) : null}
             </AnimatePresence>
