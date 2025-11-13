@@ -1,4 +1,6 @@
+import { motion } from "framer-motion";
 import type { PlayerInfo, PlayerSelectedPayload, RoomStatePayload } from "@/types/socket";
+import Card from "./Card";
 
 type HostViewProps = {
     roomState: RoomStatePayload;
@@ -7,6 +9,8 @@ type HostViewProps = {
     promptChoice: { type: "truth" | "trick"; content: string } | null;
     promptCountdown: number | null;
     isFinishEnabled: boolean;
+    gameStarted: boolean;
+    choiceOption: "truth" | "trick" | null;
     onStartGame: () => void;
     onFinishTurn: () => void;
 };
@@ -18,12 +22,157 @@ const HostView = ({
     promptChoice,
     promptCountdown,
     isFinishEnabled,
+    gameStarted,
+    choiceOption,
     onStartGame,
     onFinishTurn,
 }: HostViewProps) => {
     const participants = roomState.players.filter((player) => player.id !== me.id);
     const activePlayer = selected?.player ?? null;
 
+    // Lấy thông tin thẻ bài từ selected player
+    const truthOption = selected?.promptOptions?.truth;
+    const trickOption = selected?.promptOptions?.trick;
+
+    // Nếu game đã bắt đầu, hiển thị layout mới
+    if (gameStarted) {
+        return (
+            <div className="flex-1 flex gap-6">
+                {/* Bên trái: Người chơi hiện tại và 2 thẻ bài */}
+                <div className="flex-1 flex flex-col gap-6">
+                    {/* Thông tin người chơi hiện tại */}
+                    {activePlayer ? (
+                        <section className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-2xl font-bold">Người chơi hiện tại</h2>
+                                <span className="rounded-full bg-orange-500 text-white text-sm font-semibold px-4 py-1">
+                                    Lượt của
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                                    {(activePlayer.data?.name ?? activePlayer.name ?? "P")[0].toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-orange-500">
+                                        {activePlayer.data?.name ?? activePlayer.name ?? "Player"}
+                                    </p>
+                                    <p className="text-sm text-neutral-500">Đang chơi</p>
+                                </div>
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {/* 2 thẻ bài */}
+                    {(truthOption || trickOption) && activePlayer ? (
+                        <div className="grid grid-cols-2 gap-6">
+                            {/* Thẻ Truth */}
+                            {truthOption ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{
+                                        opacity: choiceOption === null || choiceOption === "truth" ? 1 : 0,
+                                        y: 0,
+                                    }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    <Card
+                                        type="truth"
+                                        content={truthOption.content}
+                                        isFlipped={choiceOption === "truth"}
+                                        isRevealed={choiceOption === "truth" || choiceOption === null}
+                                    />
+                                </motion.div>
+                            ) : null}
+
+                            {/* Thẻ Trick */}
+                            {trickOption ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{
+                                        opacity: choiceOption === null || choiceOption === "trick" ? 1 : 0,
+                                        y: 0,
+                                    }}
+                                    transition={{ duration: 0.5, delay: 0.1 }}
+                                >
+                                    <Card
+                                        type="trick"
+                                        content={trickOption.content}
+                                        isFlipped={choiceOption === "trick"}
+                                        isRevealed={choiceOption === "trick" || choiceOption === null}
+                                    />
+                                </motion.div>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-[400px] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
+                            <p className="text-neutral-500">Chờ người chơi được chọn...</p>
+                        </div>
+                    )}
+
+                    {/* Nút Finish Turn */}
+                    {activePlayer && (
+                        <div className="flex justify-center">
+                            <button
+                                type="button"
+                                className={`rounded-full px-8 py-4 text-white font-semibold text-lg shadow transition ${
+                                    isFinishEnabled
+                                        ? "bg-amber-600 hover:bg-amber-700"
+                                        : "bg-amber-400 cursor-not-allowed"
+                                }`}
+                                onClick={onFinishTurn}
+                                disabled={!isFinishEnabled}
+                            >
+                                Kết thúc lượt
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bên phải: Danh sách người chơi */}
+                <aside className="w-80 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
+                    <h3 className="text-2xl font-bold mb-4">Danh sách người chơi</h3>
+                    {roomState.players.length === 0 ? (
+                        <p className="text-neutral-500">Chưa có người chơi</p>
+                    ) : (
+                        <ul className="space-y-3">
+                            {roomState.players.map((player) => {
+                                const isActive = player.id === activePlayer?.id;
+                                return (
+                                    <li
+                                        key={player.id}
+                                        className={`rounded-lg border p-4 transition ${
+                                            isActive
+                                                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                : "border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                                {(player.data?.name ?? player.name ?? "P")[0].toUpperCase()}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-medium">
+                                                    {player.data?.name ?? player.name ?? "Unnamed Player"}
+                                                </p>
+                                                {isActive && (
+                                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                                        Đang chơi
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </aside>
+            </div>
+        );
+    }
+
+    // Layout cũ khi game chưa bắt đầu
     return (
         <section className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-8 shadow-lg space-y-8">
             <header>

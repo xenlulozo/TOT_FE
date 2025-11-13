@@ -29,6 +29,8 @@ const RoomPage = () => {
     const [isFinishEnabled, setIsFinishEnabled] = useState<boolean>(false);
     const [hasJoined, setHasJoined] = useState<boolean>(false);
     const [roomUrl, setRoomUrl] = useState<string>("");
+    const [gameStarted, setGameStarted] = useState<boolean>(false);
+    const [choiceOption, setChoiceOption] = useState<"truth" | "trick" | null>(null);
     const countdownTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const promptCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -180,6 +182,7 @@ const RoomPage = () => {
 
         const handleGameStarted = () => {
             setLastMessage("Game starting...");
+            setGameStarted(true);
             startCountdown();
         };
 
@@ -193,8 +196,19 @@ const RoomPage = () => {
             setPromptChoice(null);
             setSelectedPlayer(payload);
             setIsFinishEnabled(false);
+            setChoiceOption(null); // Reset choice option khi chọn người chơi mới
             const playerName = payload.player.data?.name ?? payload.player.name ?? "Player";
             setLastMessage(`${playerName} has been selected to play`);
+        };
+
+        const handleChoiceOption = (payload: unknown) => {
+            if (typeof payload === "object" && payload !== null) {
+                const choice = payload as { type?: "truth" | "trick" };
+                if (choice.type === "truth" || choice.type === "trick") {
+                    setChoiceOption(choice.type);
+                    setLastMessage(`Player chose ${choice.type}`);
+                }
+            }
         };
 
         socket.on("connect", handleConnect);
@@ -206,6 +220,7 @@ const RoomPage = () => {
         socket.on("roomUpdate", handleRoomUpdate);
         socket.on("tot:gameStarted", handleGameStarted);
         socket.on("tot:playerSelected", handlePlayerSelected);
+        socket.on("tot:ChoiceOption", handleChoiceOption);
 
         return () => {
             // Only remove listeners, don't disconnect socket
@@ -219,6 +234,7 @@ const RoomPage = () => {
             socket.off("roomUpdate", handleRoomUpdate);
             socket.off("tot:gameStarted", handleGameStarted);
             socket.off("tot:playerSelected", handlePlayerSelected);
+            socket.off("tot:ChoiceOption", handleChoiceOption);
             // Don't disconnect socket here - it's shared across components
         };
     }, [roomId, hasJoined, startCountdown, clearPromptCountdown]);
@@ -309,7 +325,7 @@ const RoomPage = () => {
 
             {roomState && me ? (
                 <>
-                    {me.isHost && roomUrl ? (
+                    {me.isHost && roomUrl && !gameStarted ? (
                         <section className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
                             <h2 className="text-2xl font-bold mb-4">QR Code để tham gia</h2>
                             <div className="flex flex-col items-center gap-4">
@@ -334,6 +350,8 @@ const RoomPage = () => {
                             promptChoice={promptChoice}
                             promptCountdown={promptCountdown}
                             isFinishEnabled={isFinishEnabled}
+                            gameStarted={gameStarted}
+                            choiceOption={choiceOption}
                             onStartGame={handleStartGame}
                             onFinishTurn={handleFinishTurn}
                         />

@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const DEFAULT_SOCKET_URL = "http://192.168.10.211:3333";
+const DEFAULT_SOCKET_URL = "http://192.168.10.100:3333";
 
 let socketInstance: Socket | undefined;
 
