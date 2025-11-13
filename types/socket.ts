@@ -13,16 +13,33 @@ export type RoomStatePayload = {
     hostId: string;
 };
 
+export type TotPromptType = "truth" | "trick";
+
 export type PromptOption = {
     id: string;
     content: string;
-    type: "truth" | "trick";
+    type: TotPromptType;
 };
 
 export type PromptOptions = {
     truth?: PromptOption;
     trick?: PromptOption;
     [key: string]: PromptOption | undefined;
+};
+
+export type TotTurnOptionSelectedPayload = {
+    type: TotPromptType;
+    content: string;
+};
+
+export type PlayerRenamedPayload = {
+    playerId: string;
+    name: string;
+};
+
+export type PlayerAvatarUpdatedPayload = {
+    playerId: string;
+    avatar: string;
 };
 
 export type PlayerSelectedPayload = {
@@ -102,6 +119,39 @@ export const isPlayerSelectedPayload = (payload: unknown): payload is PlayerSele
     }
 
     return true;
+};
+
+export const isTotTurnOptionSelectedPayload = (payload: unknown): payload is TotTurnOptionSelectedPayload => {
+    if (typeof payload !== "object" || payload === null) {
+        return false;
+    }
+
+    const record = payload as Record<string, unknown>;
+    if (record.type !== "truth" && record.type !== "trick") {
+        return false;
+    }
+
+    return typeof record.content === "string" && record.content.length > 0;
+};
+
+export const isPlayerRenamedPayload = (payload: unknown): payload is PlayerRenamedPayload => {
+    if (typeof payload !== "object" || payload === null) {
+        return false;
+    }
+
+    const record = payload as Record<string, unknown>;
+
+    return typeof record.playerId === "string" && typeof record.name === "string" && record.name.length > 0;
+};
+
+export const isPlayerAvatarUpdatedPayload = (payload: unknown): payload is PlayerAvatarUpdatedPayload => {
+    if (typeof payload !== "object" || payload === null) {
+        return false;
+    }
+
+    const record = payload as Record<string, unknown>;
+
+    return typeof record.playerId === "string" && typeof record.avatar === "string" && record.avatar.length > 0;
 };
 
 
