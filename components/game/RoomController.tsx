@@ -1,28 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import HostView from "@/components/test/HostView";
-import PlayerView from "@/components/test/PlayerView";
-import { connectSocket, getSocket } from "@/lib/socketClient";
 import type {
-    PlayerSelectedPayload,
-    PlayerRenamedPayload,
     PlayerAvatarUpdatedPayload,
+    PlayerRenamedPayload,
+    PlayerSelectedPayload,
     RoomStatePayload,
     TotPromptType,
     TotTurnOptionSelectedPayload,
 } from "@/types/socket";
 import {
-    isPlayerRenamedPayload,
     isPlayerAvatarUpdatedPayload,
+    isPlayerRenamedPayload,
     isPlayerSelectedPayload,
     isRoomStatePayload,
     isTotTurnOptionSelectedPayload,
 } from "@/types/socket";
 import { SocketClientEvent, SocketServerEvent } from "@/types/socketEvents";
-import { QRCodeSVG } from "qrcode.react";
+import { connectSocket, getSocket } from "@/lib/socketClient";
+import type { HostViewProps } from "@/components/test/HostView";
+import type { PlayerViewProps } from "@/components/test/PlayerView";
 
 const PLAYER_NAME_POOL = [
     "Báo Đêm",
@@ -46,69 +44,70 @@ const PLAYER_NAME_POOL = [
     "Linh Dương",
     "Hà Mã",
     "Anh Hùng Xạ Điêu",
-"Thần Điêu Cô Đơn",
-"Soái Ca Không Có Nóc",
-"Tôn Ngộ Không WiFi Yếu",
-"Đại Hiệp Bán Mì Cay",
-"Cô Dâu 8 Phần",
-"Thủ Lĩnh Dải Ngân Hà",
-"Bà Năm Chạy Sô",
-"Trùm Cuối Vũ Trụ Marvel",
-"Hậu Duệ Mì Tôm",
-"Phó Bản Nhà Bà Phương",
-"Lý Tiểu Long Lanh",
-"Công Chúa Bong Bóng",
-"Thằng Điên Remix",
-"Idol Hết Thời",
-"Ca Sĩ Lạc Tông",
-"DJ Mất Sóng",
-"Rapper Hơi Mệt",
-"Ca Dao & Beat",
-"Sầu Riêng Buồn Remix",
-"Trịnh Cơm Tấm",
-"Sơn Tùng Giả Bộ",
-"Jack Không Cắm Sạc",
-"Đức Phúc Không Nói Nhiều",
-"Mỹ Tâm Hết Pin",
-"Bánh Tráng Trộn Sầu Bi",
-"Đại Ca Bò Viên",
-"Cơm Tấm Đa Vũ Trụ",
-"Gà Rán Không Xương",
-"Bún Riêu Đại Hiệp",
-"Bánh Bao Vô Địch",
-"Mì Cay Level 100",
-"Hủ Tiếu Cảm Tử",
-"Bò Kho Chấm Muối",
-"Súp Cua 3000",
-"Cơm Rang Vũ Trụ",
-"Phở Đệ Nhất Thiên Hạ",
-"Tôm Rim Hài Hước",
-"Trùm Bia Hơi",
-"Đại Ca Quán Nhậu",
-"Hoàng Thượng Hết Tiền",
-"Cụng Ly Không Say",
-"Sếp Bia Và Đồng Bọn",
-"Karaoke Mất Nóc",
-"Micro Vàng 9999",
-"Chúa Tể Cục Gạch",
-"Đệ Nhất Gào Thét",
-"Ca Sĩ Bất Đắc Dĩ",
-"DJ Bật Sai Nhạc",
-"Vô Tình Đập Ly"
+    "Thần Điêu Cô Đơn",
+    "Soái Ca Không Có Nóc",
+    "Tôn Ngộ Không WiFi Yếu",
+    "Đại Hiệp Bán Mì Cay",
+    "Cô Dâu 8 Phần",
+    "Thủ Lĩnh Dải Ngân Hà",
+    "Bà Năm Chạy Sô",
+    "Trùm Cuối Vũ Trụ Marvel",
+    "Hậu Duệ Mì Tôm",
+    "Phó Bản Nhà Bà Phương",
+    "Lý Tiểu Long Lanh",
+    "Công Chúa Bong Bóng",
+    "Thằng Điên Remix",
+    "Idol Hết Thời",
+    "Ca Sĩ Lạc Tông",
+    "DJ Mất Sóng",
+    "Rapper Hơi Mệt",
+    "Ca Dao & Beat",
+    "Sầu Riêng Buồn Remix",
+    "Trịnh Cơm Tấm",
+    "Sơn Tùng Giả Bộ",
+    "Jack Không Cắm Sạc",
+    "Đức Phúc Không Nói Nhiều",
+    "Mỹ Tâm Hết Pin",
+    "Bánh Tráng Trộn Sầu Bi",
+    "Đại Ca Bò Viên",
+    "Cơm Tấm Đa Vũ Trụ",
+    "Gà Rán Không Xương",
+    "Bún Riêu Đại Hiệp",
+    "Bánh Bao Vô Địch",
+    "Mì Cay Level 100",
+    "Hủ Tiếu Cảm Tử",
+    "Bò Kho Chấm Muối",
+    "Súp Cua 3000",
+    "Cơm Rang Vũ Trụ",
+    "Phở Đệ Nhất Thiên Hạ",
+    "Tôm Rim Hài Hước",
+    "Trùm Bia Hơi",
+    "Đại Ca Quán Nhậu",
+    "Hoàng Thượng Hết Tiền",
+    "Cụng Ly Không Say",
+    "Sếp Bia Và Đồng Bọn",
+    "Karaoke Mất Nóc",
+    "Micro Vàng 9999",
+    "Chúa Tể Cục Gạch",
+    "Đệ Nhất Gào Thét",
+    "Ca Sĩ Bất Đắc Dĩ",
+    "DJ Bật Sai Nhạc",
+    "Vô Tình Đập Ly",
 ];
 
-const RoomPage = () => {
-    const params = useParams();
-    const roomId = params.roomId as string;
+export type RoomControllerProps = {
+    roomId?: string;
+    HostComponent: React.ComponentType<HostViewProps>;
+    PlayerComponent: React.ComponentType<PlayerViewProps>;
+};
+
+const RoomController = ({ roomId, HostComponent, PlayerComponent }: RoomControllerProps) => {
     const [status, setStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
     const [lastMessage, setLastMessage] = useState<string>("Connecting...");
     const [roomState, setRoomState] = useState<RoomStatePayload | null>(null);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<PlayerSelectedPayload | null>(null);
-    const [promptChoice, setPromptChoice] = useState<{
-        type: TotPromptType;
-        content: string;
-    } | null>(null);
+    const [promptChoice, setPromptChoice] = useState<{ type: TotPromptType; content: string } | null>(null);
     const [promptCountdown, setPromptCountdown] = useState<number | null>(null);
     const [isFinishEnabled, setIsFinishEnabled] = useState<boolean>(false);
     const [hasJoined, setHasJoined] = useState<boolean>(false);
@@ -133,12 +132,12 @@ const RoomPage = () => {
     }, [roomState]);
 
     useLayoutEffect(() => {
-        // Set roomUrl only on client side to avoid hydration mismatch
-        // This is necessary because window.location is only available on client
-        // Using useLayoutEffect to set it before paint to minimize visual flicker
-        if (typeof window !== "undefined") {
-            setRoomUrl(`${window.location.origin}/test/${roomId}`);
+        if (typeof window === "undefined") {
+            return;
         }
+
+        const nextUrl = roomId ? `${window.location.origin}${window.location.pathname}` : window.location.href;
+        setRoomUrl(nextUrl);
     }, [roomId]);
 
     const clearCountdownTimers = useCallback(() => {
@@ -200,14 +199,12 @@ const RoomPage = () => {
             return;
         }
 
-        // Initialize connection status - this is necessary for UI state
         setStatus("connecting");
 
         const socket = connectSocket();
         let hasJoinedRef = hasJoined;
 
         const joinRoomIfNeeded = () => {
-            // Only join if not already joined
             if (hasJoinedRef) {
                 return;
             }
@@ -231,7 +228,6 @@ const RoomPage = () => {
             joinRoomIfNeeded();
         };
 
-        // If already connected, join immediately
         if (socket.connected && !hasJoined) {
             setStatus("connected");
             setLastMessage("Connected, joining room...");
@@ -252,7 +248,6 @@ const RoomPage = () => {
         };
 
         const handleJoined = (payload: unknown) => {
-            console.log("🚀 ~ handleJoined ~ payload:", payload);
             if (!isRoomStatePayload(payload)) {
                 setLastMessage("Joined: Unexpected payload shape");
                 return;
@@ -265,17 +260,14 @@ const RoomPage = () => {
         };
 
         const handleReconnect = () => {
-            console.log("Socket reconnected, rejoining room...");
             setStatus("connected");
             setLastMessage("Reconnected, rejoining room...");
-            // Reset hasJoined to allow rejoin
             hasJoinedRef = false;
             setHasJoined(false);
             joinRoomIfNeeded();
         };
 
         const handleRoomUpdate = (payload: unknown) => {
-            console.log("🚀 ~ handleRoomUpdate ~ payload:", payload);
             if (!isRoomStatePayload(payload)) {
                 setLastMessage("Room update: Unexpected payload shape");
                 return;
@@ -292,7 +284,6 @@ const RoomPage = () => {
         };
 
         const handlePlayerSelected = (payload: unknown) => {
-            console.log("🚀 ~ handlePlayerSelected ~ payload:", payload)
             if (!isPlayerSelectedPayload(payload)) {
                 setLastMessage("Player selected: Unexpected payload shape");
                 return;
@@ -302,20 +293,17 @@ const RoomPage = () => {
             setPromptChoice(null);
             setSelectedPlayer(payload);
             setIsFinishEnabled(false);
-            setChoiceOption(null); // Reset choice option khi chọn người chơi mới
-            setTurnFinished(false); // Reset turnFinished khi có người chơi mới
+            setChoiceOption(null);
+            setTurnFinished(false);
             const playerName = payload.player.data?.name ?? payload.player.name ?? "Player";
             setLastMessage(`${playerName} has been selected to play`);
 
-            // Sau 7s (sau khi quay xong và popup chúc mừng hiện), set isSpinning = false để hiện thẻ bài
             setTimeout(() => {
                 setIsSpinning(false);
             }, 10000);
 
-            // Show popup if it's the current player's turn (only for non-host players)
-            // Delay 7s để đợi bánh xe xoay xong
-            const socket = getSocket();
-            if (payload.player.id === socket.id && !payload.player.isHost) {
+            const socketInstance = getSocket();
+            if (payload.player.id === socketInstance.id && !payload.player.isHost) {
                 setTimeout(() => {
                     setShowTurnPopup(true);
                 }, 7000);
@@ -323,7 +311,6 @@ const RoomPage = () => {
         };
 
         const handleTurnOptionSelected = (payload: unknown) => {
-            console.log("🚀 ~ handleTurnOptionSelected ~ payload:", payload);
             if (!isTotTurnOptionSelectedPayload(payload)) {
                 setLastMessage("Turn option selected: Unexpected payload shape");
                 return;
@@ -444,13 +431,11 @@ const RoomPage = () => {
         };
 
         const handleSpinning = () => {
-            console.log("🚀 ~ handleSpinning ~ handleSpinning:")
             setIsSpinning(true);
             setTurnFinished(false);
         };
 
         const handleTurnFinished = () => {
-            console.log("🚀 ~ handleTurnFinished ~ handleTurnFinished:")
             setTurnFinished(true);
             setIsSpinning(false);
             setSelectedPlayer(null);
@@ -482,8 +467,6 @@ const RoomPage = () => {
         socket.on(SocketServerEvent.TotGameRestarted, handleGameRestarted);
 
         return () => {
-            // Only remove listeners, don't disconnect socket
-            // Socket should remain connected for other tabs/devices
             socket.off("connect", handleConnect);
             socket.off("disconnect", handleDisconnect);
             socket.off("reconnect", handleReconnect);
@@ -500,9 +483,8 @@ const RoomPage = () => {
             socket.off(SocketServerEvent.TotSpinning, handleSpinning);
             socket.off(SocketServerEvent.TotTurnFinished, handleTurnFinished);
             socket.off(SocketServerEvent.TotGameRestarted, handleGameRestarted);
-            // Don't disconnect socket here - it's shared across components
         };
-    }, [roomId, hasJoined, startCountdown, clearPromptCountdown]);
+    }, [roomId, hasJoined, startCountdown, clearPromptCountdown, getRandomDisplayName]);
 
     useEffect(
         () => () => {
@@ -513,7 +495,7 @@ const RoomPage = () => {
     );
 
     const handleFinishTurn = useCallback(() => {
-        if (!isFinishEnabled) {
+        if (!roomId || !isFinishEnabled) {
             return;
         }
 
@@ -531,11 +513,14 @@ const RoomPage = () => {
 
     const handlePromptChoice = useCallback(
         (type: TotPromptType, content: string) => {
+            if (!roomId) {
+                return;
+            }
+
             setPromptChoice({ type, content });
             setPromptCountdown(5);
             setIsFinishEnabled(false);
 
-            // Gửi event lên server
             const socket = getSocket();
             const numericRoomId = Number.parseInt(roomId, 10);
             if (!Number.isNaN(numericRoomId)) {
@@ -573,6 +558,10 @@ const RoomPage = () => {
     );
 
     const handleStartGame = useCallback(() => {
+        if (!roomId) {
+            return;
+        }
+
         const socket = getSocket();
         const numericRoomId = Number.parseInt(roomId, 10);
         if (!Number.isNaN(numericRoomId)) {
@@ -585,6 +574,10 @@ const RoomPage = () => {
 
     const handleProfileUpdate = useCallback(
         (updates: { name?: string; avatar?: string }) => {
+            if (!roomId) {
+                return;
+            }
+
             const socket = getSocket();
 
             if (updates.name !== undefined) {
@@ -619,6 +612,10 @@ const RoomPage = () => {
     }, []);
 
     const handleRestartGame = useCallback(() => {
+        if (!roomId) {
+            return;
+        }
+
         const socket = getSocket();
         const numericRoomId = Number.parseInt(roomId, 10);
         if (!Number.isNaN(numericRoomId)) {
@@ -631,6 +628,10 @@ const RoomPage = () => {
     }, [roomId]);
 
     const handlePlayAgain = useCallback(() => {
+        if (!roomId) {
+            return;
+        }
+
         const socket = getSocket();
         const numericRoomId = Number.parseInt(roomId, 10);
         if (!Number.isNaN(numericRoomId)) {
@@ -653,33 +654,10 @@ const RoomPage = () => {
 
     return (
         <main className="relative min-h-screen flex flex-col gap-6 p-6">
-            {/* <header className="flex flex-col items-start gap-2">
-                <h1 className="text-3xl font-bold">Room {roomId}</h1>
-                <p>Status: {status}</p>
-                <p>{lastMessage}</p>
-            </header> */}
-
             {roomState && me ? (
                 <>
-                    {/* {me.isHost && roomUrl && !gameStarted ? (
-                        <section className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
-                            <h2 className="text-2xl font-bold mb-4">QR Code để tham gia</h2>
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="rounded-lg border-4 border-neutral-200 dark:border-neutral-700 p-4 bg-white">
-                                    <QRCodeSVG value={roomUrl} size={256} level="H" />
-                                </div>
-                                <p className="text-sm text-neutral-600 dark:text-neutral-400 break-all text-center max-w-md">
-                                    {roomUrl}
-                                </p>
-                                <p className="text-xs text-neutral-500 text-center">
-                                    Quét QR code này để tham gia phòng chơi
-                                </p>
-                            </div>
-                        </section>
-                    ) : null} */}
-
                     {me.isHost ? (
-                        <HostView
+                        <HostComponent
                             roomState={roomState}
                             me={me}
                             selected={selectedPlayer}
@@ -696,7 +674,7 @@ const RoomPage = () => {
                             onFinishTurn={handleFinishTurn}
                         />
                     ) : (
-                         <PlayerView
+                        <PlayerComponent
                             roomState={roomState}
                             me={me}
                             selected={selectedPlayer}
@@ -707,7 +685,7 @@ const RoomPage = () => {
                             onFinishTurn={handleFinishTurn}
                             onPromptChoice={handlePromptChoice}
                             onUpdateProfile={handleProfileUpdate}
-                             gameStarted={gameStarted}
+                            gameStarted={gameStarted}
                             onRandomName={getSuggestedDisplayName}
                         />
                     )}
@@ -797,50 +775,20 @@ const RoomPage = () => {
                                 className="mb-6"
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                transition={{
-                                    delay: 0.2,
-                                    type: "spring",
-                                    stiffness: 200,
-                                    damping: 15,
-                                }}
+                                exit={{ scale: 0 }}
+                                transition={{ type: "spring", stiffness: 260, damping: 20 }}
                             >
-                                <div className="w-20 h-20 md:w-24 md:h-24 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-4">
-                                    <span className="text-4xl md:text-5xl">🎯</span>
-                                </div>
+                                <span className="text-6xl block">⚡</span>
                             </motion.div>
-                            <motion.h2
-                                className="text-3xl md:text-4xl font-black text-white mb-3"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                Lượt của bạn!
-                            </motion.h2>
-                            <motion.p
-                                className="text-white/90 text-lg md:text-xl mb-6"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.4 }}
-                            >
-                                Hãy chọn Truth hoặc Trick để bắt đầu
-                            </motion.p>
-                            <motion.button
-                                className="bg-white text-purple-700 font-bold px-6 py-3 rounded-full hover:bg-white/90 transition-colors"
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.5 }}
+                            <h3 className="text-3xl font-bold text-white mb-2">Đến lượt bạn!</h3>
+                            <p className="text-white/80 mb-6">Host đang chọn bạn, chuẩn bị sẵn sàng nhé!</p>
+                            <button
+                                type="button"
+                                className="rounded-full bg-white/90 text-purple-700 font-semibold px-6 py-3 hover:bg-white transition"
                                 onClick={handleCloseTurnPopup}
                             >
-                                Bắt đầu
-                            </motion.button>
-                            <motion.p
-                                className="text-white/70 text-sm mt-4"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.6 }}
-                            >
-                                (Click vào màn hình để đóng)
-                            </motion.p>
+                                Sẵn sàng
+                            </button>
                         </motion.div>
                     </motion.div>
                 ) : null}
@@ -849,5 +797,5 @@ const RoomPage = () => {
     );
 };
 
-export default RoomPage;
+export default RoomController;
 

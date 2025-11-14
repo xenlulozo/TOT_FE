@@ -5,8 +5,27 @@ export type PlayerInfo = {
         [key: string]: unknown;
     };
     isHost: boolean;
-};
+    status?: string;
+    avatar: string;
 
+};
+export enum RoundState {
+    NOT_STARTED = "NOT_STARTED",
+    IN_PROGRESS = "IN_PROGRESS",
+    COMPLETED = "COMPLETED"
+  }
+export type IPlayerInfo = {
+    id: string;
+    name: string;
+    avatar: string;
+    roundState: RoundState;
+    isHost: boolean;
+};
+export type IRoomStatePayload = {
+    players: IPlayerInfo[];
+    meta: Record<string, unknown>;
+    hostId: string;
+};
 export type RoomStatePayload = {
     players: PlayerInfo[];
     meta: Record<string, unknown>;

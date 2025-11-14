@@ -3,9 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState, useRef } from "react";
-import type { PlayerInfo, PlayerSelectedPayload, PromptOption, RoomStatePayload, TotPromptType } from "@/types/socket";
-import Card from "./Card";
-import SpinningWheel from "./SpinningWheel";
+import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType } from "@/types/socket";
+
 
 const AVATAR_EMOJI: Record<string, string> = {
     fox: "🦊",
@@ -46,8 +45,8 @@ const AVATAR_EMOJI: Record<string, string> = {
 };
 
 export type HostViewProps = {
-    roomState: RoomStatePayload;
-    me: PlayerInfo;
+    roomState: IRoomStatePayload;
+    me: IPlayerInfo;
     selected: PlayerSelectedPayload | null;
     promptChoice: { type: TotPromptType; content: string } | null;
     promptCountdown: number | null;
@@ -62,7 +61,7 @@ export type HostViewProps = {
     onFinishTurn: () => void;
 };
 
-const HostView = ({
+const HostColyseusView = ({
     roomState,
     me,
     selected,
@@ -81,15 +80,15 @@ const HostView = ({
     // Filter players: loại bỏ host và những player có status là completed
     const participants = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
-        const status = player.data?.status as string | undefined;
-        return status !== "completed";
+        const status = player.roundState as RoundState;
+        return status !== RoundState.COMPLETED;
     });
     
     // Danh sách người đã chơi (completed)
     const completedPlayers = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
-        const status = player.data?.status as string | undefined;
-        return status === "completed";
+        const status = player.roundState as RoundState;
+        return status === RoundState.COMPLETED;
     });
     
     const activePlayer = selected?.player ?? null;
@@ -194,10 +193,10 @@ const HostView = ({
     const showWheel = isSpinning;
     const showCards = !isSpinning && hasCards && !turnFinished;
 
-    const renderAvatar = (player: PlayerInfo, size: "md" | "lg" = "md") => {
-        const avatarId = player.data?.avatar as string;
+    const renderAvatar = (player: IPlayerInfo, size: "md" | "lg" = "md") => {
+        const avatarId = player.avatar as string;
         const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
-        const displayName = player.data?.name as string ?? "P";
+        const displayName = player.name as string ?? "P";
         const fallbackInitial = displayName[0]?.toUpperCase() ?? "P";
         const baseClass =
             "inline-flex items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white";
@@ -222,9 +221,9 @@ const HostView = ({
                             </span>
         );
     };    // Component popup chúc mừng với animation pháo
-    const CelebrationPopup = ({ player }: { player: PlayerInfo }) => {
-        const playerName = player.data?.name ?? "Player";
-        const avatarId = player.data?.avatar as string;
+    const CelebrationPopup = ({ player }: { player: IPlayerInfo }) => {
+        const playerName = player.name ?? "Player";
+        const avatarId = player.avatar as string;
         const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
         
         return (
@@ -323,56 +322,9 @@ const HostView = ({
                 <div className="flex-1 flex gap-6">
                     {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
                     <div className="flex-1 flex flex-col gap-6">
-                        {/* Bánh xe quay - hiện khi isSpinning hoặc turnFinished */}
-                        {showWheel ? (
-                            <motion.div
-                                key="wheel"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.3 }}
-                                className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-2xl font-bold">Bánh xe quay</h3>
-                        </div>
-                                <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
-                                    <SpinningWheel players={participants} selectedPlayerId={isSpinning ? activePlayer?.id ?? null : null} />
-                    </div>
-                            </motion.div>
-                        ) : null}
+                     
 
-                        {/* 2 thẻ bài - chỉ hiện sau khi popup ẩn và không spinning */}
-                        {showCards ? (
-                            <motion.div
-                                key="cards"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 20 }}
-                                transition={{ duration: 0.5 }}
-                                className="grid grid-cols-2 gap-6"
-                            >
-                                {/* Thẻ Truth */}
-                                {truthOption ? (
-                                    <Card
-                                        type="truth"
-                                        content={promptChoice?.type === "truth" ? promptChoice.content : truthOption.content}
-                                        isFlipped={choiceOption === "truth"}
-                                        isRevealed={true}
-                                    />
-                                ) : null}
-
-                                {/* Thẻ Trick */}
-                                {trickOption ? (
-                                    <Card
-                                        type="trick"
-                                        content={promptChoice?.type === "trick" ? promptChoice.content : trickOption.content}
-                                        isFlipped={choiceOption === "trick"}
-                                        isRevealed={true}
-                                    />
-                                ) : null}
-                            </motion.div>
-                        ) : null}
+                    
                     </div>
 
                     {/* Bên phải: Danh sách người chơi và người đã chơi */}
@@ -399,7 +351,7 @@ const HostView = ({
                                                     {renderAvatar(player)}
                                                     <div className="flex-1">
                                                         <p className="font-medium">
-                                                            {player.data?.name ?? "Unnamed Player"}
+                                                            {player.name ?? "Unnamed Player"}
                                                         </p>
                                                         {isActive && (
                                                             <p className="text-xs text-green-600 dark:text-green-400">
@@ -429,7 +381,7 @@ const HostView = ({
                                                 {renderAvatar(player)}
                                                 <div className="flex-1">
                                                     <p className="font-medium text-neutral-600 dark:text-neutral-400">
-                                        {player.data?.name ?? "Unnamed Player"}
+                                            {player.name ?? "Unnamed Player"}
                                     </p>
                                                     <p className="text-xs text-neutral-500">Đã hoàn thành</p>
                                                 </div>
@@ -443,7 +395,7 @@ const HostView = ({
                 </div>
 
                 {/* Popup chúc mừng */}
-                {activePlayer && <CelebrationPopup player={activePlayer} />}
+                {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
             </>
         );
     }
@@ -488,9 +440,7 @@ const HostView = ({
                         </button>
                         )} */}
                     </div>
-                    <div className="flex-1 flex items-center justify-center overflow-hidden">
-                        <SpinningWheel players={participants} selectedPlayerId={null} />
-                    </div>
+                 
                 </div>
 
                 {/* Vùng 3: Danh sách người chơi */}
@@ -515,7 +465,7 @@ const HostView = ({
                                             {renderAvatar(player)}
                                             <div className="flex-1">
                                                 <p className="font-medium">
-                                                    {player.data?.name ?? "Unnamed Player"}
+                                                    {player?.name ?? "Unnamed Player"}
                                                 </p>
                                                 {isActive && (
                                                     <p className="text-xs text-green-600 dark:text-green-400">
@@ -535,6 +485,6 @@ const HostView = ({
     );
 };
 
-export default HostView;
+export default HostColyseusView;
 
 

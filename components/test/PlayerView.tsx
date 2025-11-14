@@ -23,6 +23,7 @@ export type PlayerViewProps = {
     onFinishTurn: () => void;
     onUpdateProfile: (profile: { name?: string; avatar?: string }) => void;
     gameStarted: boolean;
+    onRandomName: () => string;
 };
 
 const PlayerView = (props: PlayerViewProps) => {
@@ -38,6 +39,7 @@ const PlayerView = (props: PlayerViewProps) => {
         onFinishTurn,
         onUpdateProfile,
         gameStarted,
+        onRandomName,
     } = props;
     const otherPlayers = useMemo(
         () => roomState.players.filter((player) => player.id !== roomState.hostId),
@@ -110,7 +112,7 @@ const PlayerView = (props: PlayerViewProps) => {
                             onUpdateProfile(updates);
                         }}
                     >
-                        <div className="flex-1 flex items-center gap-3">
+                        <div className="flex-1 relative">
                             <input
                                 type="text"
                                 value={nameInput}
@@ -121,12 +123,23 @@ const PlayerView = (props: PlayerViewProps) => {
                                     }
                                 }}
                                 maxLength={20}
-                                className="w-full rounded-xl border border-purple-200 dark:border-purple-700/60 bg-white/80 dark:bg-neutral-900/80 px-4 py-3 text-base text-neutral-800 dark:text-neutral-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-400 transition"
+                                className="w-full rounded-xl border border-purple-200 dark:border-purple-700/60 bg-white/80 dark:bg-neutral-900/80 px-4 py-3 pr-12 text-base text-neutral-800 dark:text-neutral-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-400 transition"
                                 placeholder="Nhập tên của bạn (tối đa 20 ký tự)"
                             />
-                            <span className="text-xs text-neutral-500">
-                                {trimmedName.length}/{20}
-                            </span>
+                            <button
+                                type="button"
+                                className="absolute inset-y-0 right-2 my-auto flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition shadow-inner"
+                                onClick={() => {
+                                    const randomName = onRandomName();
+                                    setNameInput(randomName);
+                                }}
+                                title="Random tên"
+                            >
+                                <span className="text-lg">🎲</span>
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-center text-xs text-neutral-500">
+                            {trimmedName.length}/{20}
                         </div>
                         <div className="flex flex-wrap justify-center gap-2 md:gap-3">
                             {AVATAR_OPTIONS.map((option) => {
