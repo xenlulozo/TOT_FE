@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState, useRef } from "react";
 import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType } from "@/types/socket";
+import SpinningWheel from "./SpinningWheel";
 
 
 const AVATAR_EMOJI: Record<string, string> = {
@@ -56,9 +57,11 @@ export type HostViewProps = {
     roomUrl: string;
     isSpinning: boolean; // Khi nghe tot:spinning
     turnFinished: boolean; // Khi nghe tot:turnFinished
+    spinningPlayerId?: string | null; // ID của player đang được spin
     onStartGame: () => void;
     onRestartGame: () => void;
     onFinishTurn: () => void;
+    onSpinComplete?: () => void;
 };
 
 const HostColyseusView = ({
@@ -73,9 +76,11 @@ const HostColyseusView = ({
     roomUrl,
     isSpinning,
     turnFinished,
+    spinningPlayerId,
     onStartGame,
     onRestartGame,
     onFinishTurn,
+    onSpinComplete,
 }: HostViewProps) => {
     // Filter players: loại bỏ host và những player có status là completed
     const participants = roomState.players.filter((player) => {
@@ -322,9 +327,28 @@ const HostColyseusView = ({
                 <div className="flex-1 flex gap-6">
                     {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
                     <div className="flex-1 flex flex-col gap-6">
-                     
-
-                    
+                        {/* Bánh xe quay - hiện khi isSpinning */}
+                        {isSpinning && (
+                            <motion.div
+                                key="wheel"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ duration: 0.3 }}
+                                className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-2xl font-bold">Bánh xe quay</h3>
+                                </div>
+                                <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
+                                    <SpinningWheel 
+                                        players={participants} 
+                                        selectedPlayerId={spinningPlayerId || null}
+                                        onSpinComplete={onSpinComplete}
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
 
                     {/* Bên phải: Danh sách người chơi và người đã chơi */}

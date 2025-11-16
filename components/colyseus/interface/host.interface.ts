@@ -1,4 +1,4 @@
-export interface IHostPayload{
-    roomId: string;
-    url: string;
+export interface IHostPayload {
+  roomId: string;
+  url: string;
 }
