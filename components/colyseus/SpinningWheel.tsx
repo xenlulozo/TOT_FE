@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { IPlayerInfo } from "@/types/socket";
+import { IPlayerInfo, RoundState } from "@/types/socket";
+import { config } from "@/lib/socket.enum";
 
 const AVATAR_EMOJI: Record<string, string> = {
     fox: "🦊",
@@ -59,35 +60,65 @@ type SpinningWheelProps = {
     players: IPlayerInfo[];
     selectedPlayerId?: string | null;
     onSpinComplete?: () => void;
+    spinTime?: number; // Override default spin time
 };
 
-const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWheelProps) => {
+// Sample players for demonstration when no real players exist
+const SAMPLE_PLAYERS: IPlayerInfo[] = [
+    { id: "sample-1", name: "Player 1", avatar: "fox", roundState: RoundState.NOT_STARTED, isHost: false },
+    { id: "sample-2", name: "Player 2", avatar: "bear", roundState: RoundState.NOT_STARTED, isHost: false },
+    { id: "sample-3", name: "Player 3", avatar: "tiger", roundState: RoundState.NOT_STARTED, isHost: false },
+    { id: "sample-4", name: "Player 4", avatar: "panda", roundState: RoundState.NOT_STARTED, isHost: false },
+    { id: "sample-5", name: "Player 5", avatar: "unicorn", roundState: RoundState.NOT_STARTED, isHost: false },
+    { id: "sample-6", name: "Player 6", avatar: "cat", roundState: RoundState.NOT_STARTED, isHost: false },
+];
+
+
+const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = config.SPIN_TIME }: SpinningWheelProps) => {
     const [rotation, setRotation] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
 
+    // Use sample players if no real players, otherwise combine sample + real players
+    const displayPlayers = players.length === 0 ? SAMPLE_PLAYERS : players;
+    const isUsingSamplePlayers = players.length === 0;
+
+    // Handle spinning logic
     useEffect(() => {
-        if (!selectedPlayerId || players.length === 0) {
+        // If using sample players, keep spinning continuously
+        if (isUsingSamplePlayers) {
+            setIsSpinning(true);
+            const spinInterval = setInterval(() => {
+                setRotation(current => current + 1); // Slow continuous rotation
+            }, 50);
+            return () => clearInterval(spinInterval);
+        }
+
+        // Reset wheel when no player is selected
+        if (!selectedPlayerId) {
+            // Reset rotation and spinning state - this is intentional for cleanup
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             setRotation(0);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             setIsSpinning(false);
             return;
         }
 
         // Tìm index của người chơi được chọn
-        const selectedIndex = players.findIndex((p) => p.id === selectedPlayerId);
+        const selectedIndex = displayPlayers.findIndex((p) => p.id === selectedPlayerId);
         if (selectedIndex === -1) {
             return;
         }
 
-        const segmentAngle = 360 / players.length;
-        
+        const segmentAngle = 360 / displayPlayers.length;
+
         // Tính góc giữa của segment được chọn
         // Segment được vẽ từ góc -90 độ (phía trên)
         const selectedSegmentMidAngle = selectedIndex * segmentAngle + segmentAngle / 2;
-        
+
         // Mũi tên chỉ lên trên (góc -90 độ trong SVG = 270 độ trong hệ quay)
         // Để đưa segment lên vị trí mũi tên, cần xoay: 270 - selectedSegmentMidAngle
         const baseRotation = 270 - selectedSegmentMidAngle;
-        
+
         // Thêm nhiều vòng quay để tạo hiệu ứng quay nhanh rồi chậm dần (5-6 vòng)
         const extraRotations = 5 * 360; // 5 vòng quay thêm
         const targetRotation = baseRotation + extraRotations;
@@ -103,20 +134,13 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
         }, 7000);
 
         return () => clearTimeout(timer);
-    }, [selectedPlayerId, players, onSpinComplete]);
+    }, [selectedPlayerId, displayPlayers, onSpinComplete, isUsingSamplePlayers, spinTime]);
 
-    if (players.length === 0) {
-        return (
-            <div className="flex items-center justify-center w-full h-full min-h-[400px]">
-                <p className="text-neutral-500 text-lg">Chưa có người chơi</p>
-            </div>
-        );
-    }
-
-    const segmentAngle = 360 / players.length;
+    const segmentAngle = 360 / displayPlayers.length;
     const radius = 200;
     const centerX = 250;
     const centerY = 250;
+    const innerRadius = 60; // Inner radius for text positioning
 
     return (
         <div className="relative w-full h-full flex items-center justify-center min-h-[400px]">
@@ -128,9 +152,9 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
                     viewBox="0 0 500 500"
                     className="absolute inset-0"
                     animate={{ rotate: rotation }}
-                    transition={{ 
-                        duration: isSpinning ? 7 : 0, 
-                        ease: [0.17, 0.67, 0.83, 0.67], // Custom easing: nhanh rồi chậm dần (ease-out)
+                    transition={{
+                        duration: isSpinning ? spinTime / 1000 : 0,
+                        ease: [0.25, 0.1, 0.25, 1], // Custom easing để quay chậm dần tự nhiên
                     }}
                     style={{ transformOrigin: "center" }}
                     preserveAspectRatio="xMidYMid meet"
@@ -143,19 +167,19 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
                             </linearGradient>
                         ))}
                     </defs>
-                    
+
                     {/* Vẽ các segment */}
-                    {players.map((player, index) => {
+                    {displayPlayers.map((player, index) => {
                         const startAngle = (index * segmentAngle - 90) * (Math.PI / 180);
                         const endAngle = ((index + 1) * segmentAngle - 90) * (Math.PI / 180);
-                        
+
                         const x1 = centerX + radius * Math.cos(startAngle);
                         const y1 = centerY + radius * Math.sin(startAngle);
                         const x2 = centerX + radius * Math.cos(endAngle);
                         const y2 = centerY + radius * Math.sin(endAngle);
-                        
+
                         const largeArcFlag = segmentAngle > 180 ? 1 : 0;
-                        
+
                         const pathData = [
                             `M ${centerX} ${centerY}`,
                             `L ${x1} ${y1}`,
@@ -164,7 +188,7 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
                         ].join(' ');
 
                         const midAngle = (startAngle + endAngle) / 2;
-                        const textRadius = radius * 0.7;
+                        const textRadius = (radius + innerRadius) / 2; // Position text in middle of segment
                         const textX = centerX + textRadius * Math.cos(midAngle);
                         const textY = centerY + textRadius * Math.sin(midAngle);
 
@@ -180,29 +204,32 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
                                     strokeWidth="2"
                                     className="transition-opacity"
                                 />
+                                {/* Avatar emoji */}
                                 <text
                                     x={textX}
-                                    y={textY}
+                                    y={textY - 15}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fontSize="32"
-                                    fontWeight="bold"
+                                    fontSize="24"
                                     fill="#ffffff"
                                     className="pointer-events-none select-none"
+                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY - 15})`}
                                 >
                                     {avatarEmoji}
                                 </text>
+                                {/* Player name - rotated to follow segment direction */}
                                 <text
                                     x={textX}
-                                    y={textY + 35}
+                                    y={textY + 10}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fontSize="14"
+                                    fontSize="12"
                                     fontWeight="600"
                                     fill="#ffffff"
                                     className="pointer-events-none select-none"
+                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY + 10})`}
                                 >
-                                    {player.name || "Player"}
+                                    {player.name?.slice(0, 8) || "Player"}
                                 </text>
                             </g>
                         );
@@ -221,10 +248,10 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete }: SpinningWh
                     </svg>
                 </div>
 
-                {/* Vòng tròn trung tâm */}
+                {/* Vòng tròn trung tâm với shadow */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 border-4 border-white shadow-xl flex items-center justify-center">
-                        <span className="text-2xl">🎯</span>
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 border-4 border-white shadow-2xl flex items-center justify-center">
+                        <span className="text-3xl">🎯</span>
                     </div>
                 </div>
             </div>

@@ -9,9 +9,19 @@ export enum SocketEnum {
 
   SPIN = "SPIN",
   PLAYER_SELECTED = "PLAYER_SELECTED",
+
+  PICK_PROMPT = "PICK_PROMPT",
+  TRUTH_PROMPT_SELECTED = "TRUTH_PROMPT_SELECTED",
+  TRICK_PROMPT_SELECTED = "TRICK_PROMPT_SELECTED",
+  END_TURN = "END_TURN",
 }
 
 export const config = {
-  SPIN_TIME: 5000,
+  SPIN_TIME: 7000,
   PLAYER_SELECTED_TIME: 7000,
+
+  TIME_CLOSE_POPUP_SELECTED_PLAYER: 4000,
+
+  // Prompt selection timing
+  PROMPT_SELECTION_TIME: 10000, // 10 seconds for prompt selection
 };

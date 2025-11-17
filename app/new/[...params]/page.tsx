@@ -10,6 +10,7 @@ import { RoomState } from "@/types/ws.enum";
 import { SocketEnum } from "@/lib/socket.enum";
 import { IHostPayload } from "@/components/colyseus/interface/host.interface";
 import { MapSchema } from "@colyseus/schema";
+import { IPlayerSelectedPayload } from "@/components/colyseus/interface/game.interface";
 
 // Type for Colyseus room state
 type ColyseusRoomState = {
@@ -32,7 +33,7 @@ const PixiRoomPage = () => {
         meta: {},
         hostId: ""
     });
-    const [selected, setSelected] = useState<PlayerSelectedPayload | null>(null);
+    const [selected, setSelected] = useState<IPlayerSelectedPayload | null>(null);
     const [promptChoice, setPromptChoice] = useState<{ type: TotPromptType; content: string } | null>(null);
     const [promptCountdown, setPromptCountdown] = useState<number | null>(null);
     const [isFinishEnabled, setIsFinishEnabled] = useState<boolean>(false);
@@ -43,6 +44,9 @@ const PixiRoomPage = () => {
     const [turnFinished, setTurnFinished] = useState<boolean>(false);
     const [hostId, setHostId] = useState<string>("");
     const [spinningPlayerId, setSpinningPlayerId] = useState<string | null>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<IPlayerSelectedPayload | null>(null);
+    const [showPromptSelection, setShowPromptSelection] = useState<boolean>(false);
+    const [selectedPrompt, setSelectedPrompt] = useState<"truth" | "trick" | null>(null);
 
     // Ref to store room for cleanup
     const roomRef = useRef<Room | null>(null);
@@ -185,17 +189,74 @@ const PixiRoomPage = () => {
                 // Handle SPIN event
                 connectedRoom.onMessage(SocketEnum.SPIN, (message: { playerId: string } | unknown) => {
                     console.log("🚀 ~ SPIN received:", message);
-                    
+
                     let playerId: string | undefined;
                     if (typeof message === 'object' && message !== null && 'playerId' in message) {
                         playerId = (message as { playerId: string }).playerId;
                     }
-                    
+
                     if (playerId) {
                         setSpinningPlayerId(playerId);
                         setIsSpinning(true);
                         console.log("🚀 ~ Starting spin for player:", playerId);
                     }
+                });
+
+                // Handle PLAYER_SELECTED event - provides player data for prompt selection
+                connectedRoom.onMessage(SocketEnum.PLAYER_SELECTED, (message: IPlayerSelectedPayload | unknown) => {
+                    console.log("🚀 ~ PLAYER_SELECTED received:", message);
+
+                    if (typeof message === 'object' && message !== null) {
+                        const payload = message as IPlayerSelectedPayload;
+                        setSelectedPlayer(payload); // Store player data for later use
+                        console.log("🚀 ~ Player selected:", payload.player.name);
+                    }
+                });
+
+                // Handle PICK_PROMPT event - signal to show prompt selection UI
+                connectedRoom.onMessage(SocketEnum.PICK_PROMPT, (message: unknown) => {
+                    console.log("🚀 ~ PICK_PROMPT received:", message);
+                    console.log("🚀 ~ Current state - selectedPlayer:", selectedPlayer, "showPromptSelection:", showPromptSelection);
+
+                    // PICK_PROMPT is just a signal to show the prompt selection UI
+                    // It can arrive before or after PLAYER_SELECTED
+                    setShowPromptSelection(true);
+                    setSelectedPrompt(null); // Reset prompt selection
+                    console.log("🚀 ~ After PICK_PROMPT - showPromptSelection set to true, popup should show");
+                });
+
+                // Handle TRUTH_PROMPT_SELECTED event
+                connectedRoom.onMessage(SocketEnum.TRUTH_PROMPT_SELECTED, (message: { playerId: string; prompt?: unknown } | unknown) => {
+                    console.log("🚀 ~ TRUTH_PROMPT_SELECTED received:", message);
+
+                    if (typeof message === 'object' && message !== null) {
+                        setSelectedPrompt("truth");
+                        // Don't hide prompt selection - wait for END_TURN event
+                        console.log("🚀 ~ Truth prompt selected");
+                    }
+                });
+
+                // Handle TRICK_PROMPT_SELECTED event
+                connectedRoom.onMessage(SocketEnum.TRICK_PROMPT_SELECTED, (message: { playerId: string; prompt?: unknown } | unknown) => {
+                    console.log("🚀 ~ TRICK_PROMPT_SELECTED received:", message);
+
+                    if (typeof message === 'object' && message !== null) {
+                        setSelectedPrompt("trick");
+                        // Don't hide prompt selection - wait for END_TURN event
+                        console.log("🚀 ~ Trick prompt selected");
+                    }
+                });
+
+                // Handle END_TURN event - reset states for next turn
+                connectedRoom.onMessage(SocketEnum.END_TURN, (message: unknown) => {
+                    console.log("🚀 ~ END_TURN received:", message);
+                    console.log("🚀 ~ Before END_TURN - showPromptSelection:", showPromptSelection);
+
+                    // Only reset if this is from server (not from user clicking end turn)
+                    // Client popups should be closed by user action, not server event
+                    setSelectedPrompt(null);
+                    setSelectedPlayer(null); // Clear selected player
+                    console.log("🚀 ~ END_TURN received from server - states partially reset");
                 });
 
                 // Listen to room state changes if available
@@ -302,6 +363,28 @@ const PixiRoomPage = () => {
         }
     };
 
+    const handlePromptSelected = (promptType: "truth" | "trick") => {
+        console.log("🎯 page.tsx: handlePromptSelected called with", promptType);
+        console.log("🔍 page.tsx: room exists?", !!room);
+        console.log("🔍 page.tsx: selectedPlayer exists?", !!selectedPlayer);
+
+        if (room && selectedPlayer) {
+            const eventType = promptType === "truth" ? SocketEnum.TRUTH_PROMPT_SELECTED : SocketEnum.TRICK_PROMPT_SELECTED;
+            console.log(`📤 page.tsx: Sending ${eventType} with playerId:`, selectedPlayer.player.id);
+            room.send(eventType, { playerId: selectedPlayer.player.id });
+            console.log(`🚀 ~ handlePromptSelected ~ ${eventType} sent for player:`, selectedPlayer.player.name);
+        } else {
+            console.log("❌ page.tsx: Cannot send event - room or selectedPlayer missing");
+        }
+    };
+
+    const handleEndTurn = () => {
+        if (room) {
+            room.send(SocketEnum.END_TURN);
+            console.log("🚀 ~ handleEndTurn ~ END_TURN sent");
+        }
+    };
+
     // Show loading state while connecting
     if (connectionStatus === "connecting") {
         return (
@@ -336,10 +419,15 @@ const PixiRoomPage = () => {
                 isSpinning={isSpinning}
                 turnFinished={turnFinished}
                 spinningPlayerId={spinningPlayerId}
+                selectedPlayer={selectedPlayer}
                 onStartGame={handleStartGame}
                 onRestartGame={handleRestartGame}
                 onFinishTurn={handleFinishTurn}
                 onSpinComplete={handleSpinComplete}
+                onSelectedPlayerClose={() => setSelectedPlayer(null)}
+                showPromptSelection={showPromptSelection}
+                selectedPrompt={selectedPrompt}
+                onPromptSelected={handlePromptSelected}
             />
         );
     } else {
@@ -349,8 +437,13 @@ const PixiRoomPage = () => {
                 roomState={roomState}
                 me={me}
                 gameStarted={gameStarted}
+                selectedPlayer={selectedPlayer}
+                showPromptSelection={showPromptSelection}
                 onUpdateProfile={handleUpdateProfile}
                 onStartGame={handleStartGame}
+                onSelectedPlayerClose={() => setSelectedPlayer(null)}
+                onPromptSelected={handlePromptSelected}
+                onEndTurn={handleEndTurn}
             />
         );
     }

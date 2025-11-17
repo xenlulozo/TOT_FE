@@ -2,9 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType } from "@/types/socket";
 import SpinningWheel from "./SpinningWheel";
+import SelectedPlayerPopup from "./SelectedPlayerPopup";
+import PromptSelection from "./PromptSelection";
+import { IPlayerSelectedPayload } from "./interface/game.interface";
 
 
 const AVATAR_EMOJI: Record<string, string> = {
@@ -48,7 +51,7 @@ const AVATAR_EMOJI: Record<string, string> = {
 export type HostViewProps = {
     roomState: IRoomStatePayload;
     me: IPlayerInfo;
-    selected: PlayerSelectedPayload | null;
+    selected: IPlayerSelectedPayload | null;
     promptChoice: { type: TotPromptType; content: string } | null;
     promptCountdown: number | null;
     isFinishEnabled: boolean;
@@ -58,10 +61,15 @@ export type HostViewProps = {
     isSpinning: boolean; // Khi nghe tot:spinning
     turnFinished: boolean; // Khi nghe tot:turnFinished
     spinningPlayerId?: string | null; // ID của player đang được spin
+    selectedPlayer?: IPlayerSelectedPayload | null; // Player được chọn sau khi quay
     onStartGame: () => void;
     onRestartGame: () => void;
     onFinishTurn: () => void;
     onSpinComplete?: () => void;
+    onSelectedPlayerClose?: () => void;
+    showPromptSelection?: boolean;
+    selectedPrompt?: "truth" | "trick" | null; // Which prompt was selected (from server events)
+    onPromptSelected?: (promptType: "truth" | "trick") => void;
 };
 
 const HostColyseusView = ({
@@ -77,37 +85,49 @@ const HostColyseusView = ({
     isSpinning,
     turnFinished,
     spinningPlayerId,
+    selectedPlayer,
     onStartGame,
     onRestartGame,
     onFinishTurn,
     onSpinComplete,
+    onSelectedPlayerClose,
+    showPromptSelection,
+    selectedPrompt,
+    onPromptSelected,
 }: HostViewProps) => {
     // Filter players: loại bỏ host và những player có status là completed
+    // Nhưng vẫn hiển thị tất cả players trong bánh xe preview (trước khi game bắt đầu)
     const participants = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
         const status = player.roundState as RoundState;
         return status !== RoundState.COMPLETED;
     });
-    
+
+    // For wheel display, show all active players (including during game)
+    const wheelPlayers = roomState.players.filter((player) => {
+        const status = player.roundState as RoundState;
+        return status !== RoundState.COMPLETED;
+    });
+
     // Danh sách người đã chơi (completed)
     const completedPlayers = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
         const status = player.roundState as RoundState;
         return status === RoundState.COMPLETED;
     });
-    
+
     const activePlayer = selected?.player ?? null;
 
     // Lấy thông tin thẻ bài từ selected player
     const truthOption = selected?.promptOptions?.truth;
     const trickOption = selected?.promptOptions?.trick;
-    
+
     // State để quản lý popup chúc mừng sau khi bánh xe quay xong
     const [showCelebrationPopup, setShowCelebrationPopup] = useState(false);
     const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hidePopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasShownPopupRef = useRef<string | null>(null); // Track player đã hiện popup
-    
+
     // Logic đơn giản:
     // Khi có activePlayer mới và đang spinning → sau 7s hiện popup chúc mừng và thẻ bài
     // Sau 10s (7s quay + 3s popup) → ẩn popup, thẻ bài vẫn hiện
@@ -125,7 +145,7 @@ const HostColyseusView = ({
             hasShownPopupRef.current = null;
             return;
         }
-        
+
         // Nếu đã hiện popup cho player này rồi, không hiện lại
         if (hasShownPopupRef.current === activePlayer.id) {
             console.log("🚀 ~ HostView ~ Đã hiện popup cho player này rồi, skip");
@@ -133,16 +153,16 @@ const HostColyseusView = ({
 
             return;
         }
-        
+
         // Chỉ bắt đầu timer khi đang spinning và chưa có timer nào đang chạy
         // Và popup chưa đang hiện
         if (!isSpinning || popupTimerRef.current || showCelebrationPopup) {
             console.log("🚀 ~ HostView ~ Điều kiện không đủ:", { isSpinning, hasTimer: !!popupTimerRef.current, showPopup: showCelebrationPopup });
             return;
         }
-        
+
         console.log("🚀 ~ HostView ~ Bắt đầu timer popup cho player:", activePlayer.id);
-        
+
         // Sau 7s (thời gian bánh xe quay), hiện popup chúc mừng
         const popupTimer = setTimeout(() => {
             console.log("🚀 ~ HostView ~ Hiện popup chúc mừng");
@@ -151,7 +171,7 @@ const HostColyseusView = ({
             hasShownPopupRef.current = activePlayer.id;
         }, 7000);
         popupTimerRef.current = popupTimer;
-        
+
         // Sau 10s (7s quay + 3s popup), ẩn popup
         const hidePopupTimer = setTimeout(() => {
             console.log("🚀 ~ HostView ~ Ẩn popup chúc mừng");
@@ -159,7 +179,7 @@ const HostColyseusView = ({
             hidePopupTimerRef.current = null;
         }, 10000);
         hidePopupTimerRef.current = hidePopupTimer;
-        
+
         // Cleanup khi activePlayer hoặc isSpinning thay đổi
         return () => {
             console.log("🚀 ~ HostView ~ Cleanup timer");
@@ -174,7 +194,7 @@ const HostColyseusView = ({
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activePlayer?.id, isSpinning]);
-    
+
     // Khi turnFinished, reset popup và ref để có thể hiện lại ở turn tiếp theo
     useEffect(() => {
         if (turnFinished) {
@@ -190,7 +210,7 @@ const HostColyseusView = ({
             }
         }
     }, [turnFinished]);
-    
+
     // Logic đơn giản: chỉ dùng isSpinning
     // - isSpinning = true → hiện bánh xe, ẩn thẻ bài
     // - isSpinning = false → ẩn bánh xe, hiện thẻ bài (nếu có)
@@ -208,29 +228,53 @@ const HostColyseusView = ({
         const sizeClass = size === "lg" ? "w-20 h-20 text-5xl" : "w-10 h-10 text-2xl";
 
         if (emoji) {
-    return (
+            return (
                 <span className={`${baseClass} ${sizeClass}`} aria-label={displayName}>
                     {emoji}
-                    </span>
+                </span>
             );
         }
 
         return (
             <span
-                className={`${baseClass} ${
-                    size === "lg" ? "w-20 h-20 text-3xl font-black" : "w-10 h-10 text-lg font-bold"
-                }`}
+                className={`${baseClass} ${size === "lg" ? "w-20 h-20 text-3xl font-black" : "w-10 h-10 text-lg font-bold"
+                    }`}
                 aria-label={displayName}
             >
                 {fallbackInitial}
-                            </span>
+            </span>
         );
     };    // Component popup chúc mừng với animation pháo
     const CelebrationPopup = ({ player }: { player: IPlayerInfo }) => {
         const playerName = player.name ?? "Player";
         const avatarId = player.avatar as string;
         const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
-        
+
+        // Pre-calculate firework properties to avoid Math.random in render
+        type Firework = {
+            id: number;
+            left: number;
+            top: number;
+            color: string;
+            yOffset: number;
+            xOffset: number;
+            delay: number;
+        };
+
+        const fireworks = useMemo((): Firework[] =>
+            [...Array(20)].map((_, i) => ({
+                id: i,
+                left: Math.random() * 100,
+                top: Math.random() * 100,
+                color: ["#ff6b6b", "#4ecdc4", "#ffe66d", "#ff8b94", "#95e1d3"][
+                    Math.floor(Math.random() * 5)
+                ] as string,
+                yOffset: -100 + Math.random() * 200,
+                xOffset: -50 + Math.random() * 100,
+                delay: Math.random() * 0.5,
+            })), []
+        );
+
         return (
             <AnimatePresence>
                 {showCelebrationPopup ? (
@@ -244,37 +288,35 @@ const HostColyseusView = ({
                     >
                         {/* Background overlay */}
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-                        
+
                         {/* Pháo chúc mừng */}
                         <div className="absolute inset-0 overflow-hidden">
-                            {[...Array(20)].map((_, i) => (
+                            {fireworks.map((firework) => (
                                 <motion.div
-                                    key={i}
+                                    key={firework.id}
                                     className="absolute w-2 h-2 rounded-full"
                                     style={{
-                                        left: `${Math.random() * 100}%`,
-                                        top: `${Math.random() * 100}%`,
-                                        background: ["#ff6b6b", "#4ecdc4", "#ffe66d", "#ff8b94", "#95e1d3"][
-                                            Math.floor(Math.random() * 5)
-                                        ],
+                                        left: `${firework.left}%`,
+                                        top: `${firework.top}%`,
+                                        background: firework.color,
                                     }}
                                     initial={{ scale: 0, opacity: 1 }}
                                     animate={{
                                         scale: [0, 1.5, 0],
                                         opacity: [1, 1, 0],
-                                        y: [0, -100 + Math.random() * 200],
-                                        x: [0, -50 + Math.random() * 100],
+                                        y: [0, firework.yOffset],
+                                        x: [0, firework.xOffset],
                                     }}
                                     transition={{
                                         duration: 1.5,
-                                        delay: Math.random() * 0.5,
+                                        delay: firework.delay,
                                         repeat: Infinity,
                                         repeatDelay: 0.5,
                                     }}
                                 />
                             ))}
                         </div>
-                        
+
                         {/* Popup nội dung */}
                         <motion.div
                             className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-yellow-400"
@@ -321,34 +363,35 @@ const HostColyseusView = ({
     };
 
     // Nếu game đã bắt đầu, hiển thị layout với bánh xe, danh sách và thẻ bài
+    // Bánh xe luôn hiển thị ngay từ khi game bắt đầu
     if (gameStarted) {
         return (
             <>
                 <div className="flex-1 flex gap-6">
                     {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
                     <div className="flex-1 flex flex-col gap-6">
-                        {/* Bánh xe quay - hiện khi isSpinning */}
-                        {isSpinning && (
-                            <motion.div
-                                key="wheel"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.3 }}
-                                className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-2xl font-bold">Bánh xe quay</h3>
-                                </div>
-                                <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
-                                    <SpinningWheel 
-                                        players={participants} 
-                                        selectedPlayerId={spinningPlayerId || null}
-                                        onSpinComplete={onSpinComplete}
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
+                        {/* Bánh xe quay - luôn hiện khi game đã bắt đầu */}
+                        <motion.div
+                            key="wheel"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.3 }}
+                            className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-2xl font-bold">
+                                    {isSpinning ? "Đang quay..." : "Bánh xe quay"}
+                                </h3>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
+                                <SpinningWheel
+                                    players={wheelPlayers}
+                                    selectedPlayerId={isSpinning ? spinningPlayerId : null}
+                                    onSpinComplete={onSpinComplete}
+                                />
+                            </div>
+                        </motion.div>
                     </div>
 
                     {/* Bên phải: Danh sách người chơi và người đã chơi */}
@@ -365,11 +408,10 @@ const HostColyseusView = ({
                                         return (
                                             <li
                                                 key={player.id}
-                                                className={`rounded-lg border p-4 transition ${
-                                                    isActive
-                                                        ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                                                        : "border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
-                                                }`}
+                                                className={`rounded-lg border p-4 transition ${isActive
+                                                    ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                    : "border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     {renderAvatar(player)}
@@ -380,8 +422,8 @@ const HostColyseusView = ({
                                                         {isActive && (
                                                             <p className="text-xs text-green-600 dark:text-green-400">
                                                                 Đang chơi
-                    </p>
-                )}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </li>
@@ -397,22 +439,22 @@ const HostColyseusView = ({
                                 <h3 className="text-2xl font-bold mb-4">Đã chơi</h3>
                                 <ul className="space-y-3 max-h-[200px] overflow-y-auto">
                                     {completedPlayers.map((player) => (
-                                <li
-                                    key={player.id}
+                                        <li
+                                            key={player.id}
                                             className="rounded-lg border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-800/50 opacity-60 p-4"
-                                >
+                                        >
                                             <div className="flex items-center gap-3">
                                                 {renderAvatar(player)}
                                                 <div className="flex-1">
                                                     <p className="font-medium text-neutral-600 dark:text-neutral-400">
-                                            {player.name ?? "Unnamed Player"}
-                                    </p>
+                                                        {player.name ?? "Unnamed Player"}
+                                                    </p>
                                                     <p className="text-xs text-neutral-500">Đã hoàn thành</p>
                                                 </div>
                                             </div>
-                                </li>
-                            ))}
-                        </ul>
+                                        </li>
+                                    ))}
+                                </ul>
                             </aside>
                         )}
                     </div>
@@ -420,6 +462,21 @@ const HostColyseusView = ({
 
                 {/* Popup chúc mừng */}
                 {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
+
+                {/* Selected Player Popup */}
+                <SelectedPlayerPopup
+                    selectedPlayer={selectedPlayer ?? null}
+                    onClose={onSelectedPlayerClose}
+                />
+
+                {/* Prompt Selection - shown when PICK_PROMPT received, uses data from PLAYER_SELECTED */}
+                {showPromptSelection && (
+                    <PromptSelection
+                        selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
+                        selectedPrompt={selectedPrompt} // Which prompt was selected (from server events)
+                        onPromptSelected={onPromptSelected || (() => { })}
+                    />
+                )}
             </>
         );
     }
@@ -453,18 +510,31 @@ const HostColyseusView = ({
                 {/* Vùng 2: Spinning Wheel */}
                 <div className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 overflow-hidden">
                     <div className="flex items-center justify-between mb-4">
-                        {/* <h3 className="text-2xl font-bold">Bánh xe quay</h3> */}
-                        {/* {participants.length > 0 && (
-                        <button
-                            type="button"
+                        <h3 className="text-2xl font-bold">Bánh xe quay</h3>
+                        {participants.length > 0 && (
+                            <button
+                                type="button"
                                 className="rounded-lg bg-blue-600 px-6 py-2 text-white font-semibold shadow hover:bg-blue-700 transition"
-                            onClick={onStartGame}
-                        >
+                                onClick={onStartGame}
+                            >
                                 Bắt đầu game
-                        </button>
-                        )} */}
+                            </button>
+                        )}
                     </div>
-                 
+                    <div className="flex-1 flex items-center justify-center overflow-hidden">
+                        {participants.length > 0 ? (
+                            <SpinningWheel
+                                players={wheelPlayers}
+                                selectedPlayerId={null} // Không spin khi preview
+                                onSpinComplete={() => { }} // Không cần callback khi preview
+                            />
+                        ) : (
+                            <div className="text-center text-neutral-500">
+                                <p className="text-lg mb-2">🎯</p>
+                                <p>Chờ người chơi tham gia</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Vùng 3: Danh sách người chơi */}
@@ -479,11 +549,10 @@ const HostColyseusView = ({
                                 return (
                                     <li
                                         key={player.id}
-                                        className={`rounded-lg border p-4 transition ${
-                                            isActive
-                                                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                                                : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
-                                        }`}
+                                        className={`rounded-lg border p-4 transition ${isActive
+                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                            : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             {renderAvatar(player)}
@@ -497,7 +566,7 @@ const HostColyseusView = ({
                                                     </p>
                                                 )}
                                             </div>
-                    </div>
+                                        </div>
                                     </li>
                                 );
                             })}

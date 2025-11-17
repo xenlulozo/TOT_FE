@@ -6,6 +6,9 @@ import * as PIXI from "pixi.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IRoomStatePayload, IPlayerInfo } from "@/types/socket";
 import CountdownPopup from "./CountdownPopup";
+import SelectedPlayerPopup from "./SelectedPlayerPopup";
+import ClientPromptPopup from "./ClientPromptPopup";
+import { IPlayerSelectedPayload } from "./interface/game.interface";
 
 extend({
     Container: PixiContainer,
@@ -45,8 +48,13 @@ export type ClientViewProps = {
     roomState: IRoomStatePayload;
     me: IPlayerInfo;
     gameStarted: boolean;
+    selectedPlayer?: IPlayerSelectedPayload | null;
+    showPromptSelection?: boolean;
     onUpdateProfile: (profile: { name: string; avatar: string }) => void;
     onStartGame: () => void;
+    onSelectedPlayerClose?: () => void;
+    onPromptSelected?: (promptType: "truth" | "trick") => void;
+    onEndTurn?: () => void;
 };
 
 const useCanvasSize = (ref: React.MutableRefObject<HTMLDivElement | null>) => {
@@ -122,7 +130,29 @@ const PixiWelcomeCard = ({ width, height }: { width: number; height: number }) =
     );
 };
 
-const ClientColyseusView = ({ roomState, me, gameStarted, onUpdateProfile, onStartGame }: ClientViewProps) => {
+const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPromptSelection, onUpdateProfile, onStartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
+    // Local state to control popup visibility
+    const [localShowPromptSelection, setLocalShowPromptSelection] = useState(showPromptSelection);
+
+    // Debug wrapper for onPromptSelected
+    const handlePromptSelected = (promptType: "truth" | "trick") => {
+        console.log("🎯 ClientColyseusView: handlePromptSelected called with", promptType);
+        if (onPromptSelected) {
+            console.log("📤 ClientColyseusView: Calling onPromptSelected callback");
+            onPromptSelected(promptType);
+        } else {
+            console.log("❌ ClientColyseusView: onPromptSelected callback is undefined");
+        }
+    };
+
+    // Update local state when prop changes
+    useEffect(() => {
+        setLocalShowPromptSelection(showPromptSelection);
+    }, [showPromptSelection]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleClosePromptPopup = () => {
+        setLocalShowPromptSelection(false);
+    };
     const [nameInput, setNameInput] = useState(me.name || "");
     const [selectedAvatar, setSelectedAvatar] = useState<string>(() => {
         return me.avatar && AVATAR_OPTIONS.some((opt) => opt.id === me.avatar)
@@ -305,8 +335,8 @@ const ClientColyseusView = ({ roomState, me, gameStarted, onUpdateProfile, onSta
                                             type="button"
                                             onClick={() => setSelectedAvatar(option.id)}
                                             className={`relative rounded-2xl border-2 p-3 transition-all transform ${isSelected
-                                                    ? "border-indigo-400 bg-indigo-500/30 scale-110 shadow-lg shadow-indigo-500/50"
-                                                    : "border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10"
+                                                ? "border-indigo-400 bg-indigo-500/30 scale-110 shadow-lg shadow-indigo-500/50"
+                                                : "border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10"
                                                 }`}
                                         >
                                             <span className="text-3xl block">{option.emoji}</span>
@@ -325,8 +355,8 @@ const ClientColyseusView = ({ roomState, me, gameStarted, onUpdateProfile, onSta
                             onClick={handleSubmitProfile}
                             disabled={isSubmitDisabled}
                             className={`w-full rounded-2xl px-6 py-4 font-bold text-lg transition-all transform ${isSubmitDisabled
-                                    ? "bg-white/10 text-white/40 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
+                                ? "bg-white/10 text-white/40 cursor-not-allowed"
+                                : "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
                                 }`}
                         >
                             {isSubmitting ? "Đang cập nhật..." : "Cập nhật hồ sơ"}
@@ -413,6 +443,24 @@ const ClientColyseusView = ({ roomState, me, gameStarted, onUpdateProfile, onSta
                     <div className="text-center text-white/60 text-sm">
                         <p>Đang chờ bắt đầu trò chơi...</p>
                     </div>
+                )}
+
+                {/* Selected Player Popup - chỉ hiển thị khi người này là người được chọn */}
+                {selectedPlayer && selectedPlayer.player.id === me.id && (
+                    <SelectedPlayerPopup
+                        selectedPlayer={selectedPlayer}
+                        onClose={onSelectedPlayerClose}
+                    />
+                )}
+
+                {/* Client Prompt Popup - hiển thị khi PICK_PROMPT received */}
+                {localShowPromptSelection && (
+                    <ClientPromptPopup
+                        selectedPlayer={selectedPlayer || null} // Có thể null ban đầu, sẽ update khi PLAYER_SELECTED đến
+                        onPromptSelected={handlePromptSelected}
+                        onEndTurn={onEndTurn || (() => { })}
+                        onClose={handleClosePromptPopup}
+                    />
                 )}
             </div>
         </div>
