@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType } from "@/types/socket";
 import SpinningWheel from "./SpinningWheel";
 import SelectedPlayerPopup from "./SelectedPlayerPopup";
+import CountdownPopup from "./CountdownPopup";
 import PromptSelection from "./PromptSelection";
 import { IPlayerSelectedPayload } from "./interface/game.interface";
 
@@ -69,6 +70,9 @@ export type HostViewProps = {
     onSelectedPlayerClose?: () => void;
     showPromptSelection?: boolean;
     selectedPrompt?: "truth" | "trick" | null; // Which prompt was selected (from server events)
+    promptContent?: string | null; // Content of the selected prompt
+    showTurnCountdown?: boolean; // Trigger countdown for next turn
+    onTurnCountdownComplete?: () => void; // Callback when countdown completes
     onPromptSelected?: (promptType: "truth" | "trick") => void;
 };
 
@@ -93,18 +97,22 @@ const HostColyseusView = ({
     onSelectedPlayerClose,
     showPromptSelection,
     selectedPrompt,
+    promptContent,
+    showTurnCountdown,
+    onTurnCountdownComplete,
     onPromptSelected,
 }: HostViewProps) => {
     // Filter players: loại bỏ host và những player có status là completed
-    // Nhưng vẫn hiển thị tất cả players trong bánh xe preview (trước khi game bắt đầu)
+    // wheelPlayers luôn loại bỏ host để host không xuất hiện trong bánh xe
     const participants = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
         const status = player.roundState as RoundState;
         return status !== RoundState.COMPLETED;
     });
 
-    // For wheel display, show all active players (including during game)
+    // For wheel display, show all active players except host (during game)
     const wheelPlayers = roomState.players.filter((player) => {
+        if (player.id === me.id) return false; // Always exclude host
         const status = player.roundState as RoundState;
         return status !== RoundState.COMPLETED;
     });
@@ -124,7 +132,23 @@ const HostColyseusView = ({
 
     // State để quản lý popup chúc mừng sau khi bánh xe quay xong
     const [showCelebrationPopup, setShowCelebrationPopup] = useState(false);
+    const [showCountdown, setShowCountdown] = useState(false);
     const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Handle countdown completion
+    const handleCountdownComplete = () => {
+        setShowCountdown(false);
+        onTurnCountdownComplete?.();
+    };
+
+    // Trigger countdown when showTurnCountdown prop changes
+    useEffect(() => {
+        if (showTurnCountdown) {
+            console.log("🎯 HostColyseusView: Starting turn countdown");
+            setShowCountdown(true);
+        }
+    }, [showTurnCountdown]);
+
     const hidePopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasShownPopupRef = useRef<string | null>(null); // Track player đã hiện popup
 
@@ -277,7 +301,7 @@ const HostColyseusView = ({
 
         return (
             <AnimatePresence>
-                {showCelebrationPopup ? (
+                {showCelebrationPopup && !showCountdown ? (
                     <motion.div
                         key="celebration-popup"
                         className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
@@ -463,17 +487,20 @@ const HostColyseusView = ({
                 {/* Popup chúc mừng */}
                 {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
 
-                {/* Selected Player Popup */}
-                <SelectedPlayerPopup
-                    selectedPlayer={selectedPlayer ?? null}
-                    onClose={onSelectedPlayerClose}
-                />
+                {/* Selected Player Popup - Hide during countdown */}
+                {!showCountdown && (
+                    <SelectedPlayerPopup
+                        selectedPlayer={selectedPlayer ?? null}
+                        onClose={onSelectedPlayerClose}
+                    />
+                )}
 
-                {/* Prompt Selection - shown when PICK_PROMPT received, uses data from PLAYER_SELECTED */}
-                {showPromptSelection && (
+                {/* Prompt Selection - Hide during countdown */}
+                {showPromptSelection && !showCountdown && (
                     <PromptSelection
                         selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
-                        selectedPrompt={selectedPrompt} // Which prompt was selected (from server events)
+                        selectedPrompt={selectedPrompt ?? null} // Which prompt was selected (from server events)
+                        promptContent={promptContent} // Content of the selected prompt
                         onPromptSelected={onPromptSelected || (() => { })}
                     />
                 )}
@@ -574,6 +601,14 @@ const HostColyseusView = ({
                     )}
                 </aside>
             </div>
+
+            {/* Turn Countdown - Full screen overlay */}
+            <CountdownPopup
+                show={showCountdown}
+                onComplete={handleCountdownComplete}
+                duration={3}
+                startNumber={3}
+            />
         </section>
     );
 };

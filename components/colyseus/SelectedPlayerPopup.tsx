@@ -146,34 +146,39 @@ const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupPro
                             transition={{ delay: 0.2 }}
                             className="text-4xl font-bold text-white mb-6"
                         >
-                            🎉 Người được chọn!
+                            🎯 Lượt của {player.name || "bạn"}!
                         </motion.h1>
 
+                        {/* Player Avatar and Name Container */}
                         <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.4, type: "spring", bounce: 0.5 }}
-                            className="text-8xl mb-4"
+                            className="flex flex-col items-center mb-6"
                         >
-                            {avatarEmoji}
-                        </motion.div>
+                            {/* Avatar */}
+                            <div className="text-8xl mb-4 p-4 bg-white/10 rounded-full backdrop-blur-sm border border-white/20">
+                                {avatarEmoji}
+                            </div>
 
-                        <motion.h2
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.6 }}
-                            className="text-3xl font-bold text-white mb-2"
-                        >
-                            {player.name || "Player"}
-                        </motion.h2>
+                            {/* Name */}
+                            <motion.h2
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.6 }}
+                                className="text-3xl font-bold text-white bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text text-transparent"
+                            >
+                                {player.name || "Người chơi"}
+                            </motion.h2>
+                        </motion.div>
 
                         <motion.p
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.8 }}
-                            className="text-xl text-yellow-300 font-medium"
+                            className="text-xl text-yellow-300 font-medium text-center"
                         >
-                            Chuẩn bị trả lời câu hỏi!
+                            Đến lượt bạn trả lời câu hỏi! 🎭
                         </motion.p>
                     </div>
                 </motion.div>

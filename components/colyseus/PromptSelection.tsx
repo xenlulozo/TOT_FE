@@ -1,18 +1,128 @@
 "use client";
 
+import React, {  useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo } from "react";
+import { Application, extend } from "@pixi/react";
+import { Container, Graphics, Text } from "pixi.js";
+import * as PIXI from "pixi.js";
+
+// Extend PIXI components for React
+extend({
+  Container,
+  Graphics,
+  Text,
+});
 
 // Suppress hydration warnings for framer-motion animations
 const MotionDiv = motion.div;
 const MotionAnimatePresence = AnimatePresence;
 import { IPlayerSelectedPayload } from "./interface/game.interface";
+// import PixiCard from "./PixiCard";
+
+// Simple optimized card animation using CSS transforms only
+const OptimizedCard = ({
+  type,
+  isSelected,
+  promptContent,
+  onClick,
+  isInteractive
+}: {
+  type: 'truth' | 'trick';
+  isSelected: boolean;
+  promptContent?: string;
+  onClick?: () => void;
+  isInteractive?: boolean;
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Use CSS transforms for smooth GPU-accelerated animations
+  React.useEffect(() => {
+    if (cardRef.current) {
+      const card = cardRef.current;
+      card.style.willChange = 'transform, opacity';
+
+      if (isSelected) {
+        card.style.transform = 'scale(1.1) translateY(-20px) rotateY(180deg)';
+        card.style.zIndex = '20';
+      } else {
+        card.style.transform = 'scale(1) translateY(0) rotateY(0deg)';
+        card.style.zIndex = '10';
+      }
+    }
+  }, [isSelected]);
+
+  const bgGradient = type === 'truth'
+    ? 'bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900'
+    : 'bg-gradient-to-br from-red-400 via-red-600 to-red-900';
+
+  const frontBgGradient = type === 'truth'
+    ? 'bg-gradient-to-br from-emerald-400 via-emerald-600 to-emerald-800'
+    : 'bg-gradient-to-br from-orange-400 via-orange-600 to-orange-800';
+
+  return (
+    <div
+      ref={cardRef}
+      className={`w-64 h-80 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ease-out ${
+        isInteractive ? 'hover:scale-105' : ''
+      }`}
+      style={{
+        transformStyle: 'preserve-3d',
+        backfaceVisibility: 'hidden'
+      }}
+      onClick={isInteractive ? onClick : undefined}
+    >
+      {/* Card Back */}
+      <div
+        className={`absolute inset-0 w-full h-full ${bgGradient} flex flex-col items-center justify-center p-6 ${
+          isSelected ? 'opacity-0' : 'opacity-100'
+        } transition-opacity duration-300`}
+        style={{ backfaceVisibility: 'hidden' }}
+      >
+        <div className="text-6xl mb-4">{type === 'truth' ? '❓' : '🎭'}</div>
+        <h3 className="text-2xl font-bold text-white mb-2 uppercase">
+          {type === 'truth' ? 'Truth' : 'Trick'}
+        </h3>
+        <p className="text-center text-white/80 text-sm">
+          {type === 'truth' ? 'Câu hỏi thật thà' : 'Câu hỏi thử thách'}
+        </p>
+        <div className="mt-4 text-xl">
+          {type === 'truth' ? '🤔💭' : '😈🎪'}
+        </div>
+      </div>
+
+      {/* Card Front - Content */}
+      <div
+        className={`absolute inset-0 w-full h-full ${frontBgGradient} flex flex-col items-center justify-center p-6 ${
+          isSelected ? 'opacity-100' : 'opacity-0'
+        } transition-opacity duration-300`}
+        style={{
+          backfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)'
+        }}
+      >
+        <div className="text-5xl mb-4">{type === 'truth' ? '❓' : '🎭'}</div>
+        <h3 className="text-xl font-bold text-white mb-3 uppercase">
+          {type === 'truth' ? 'Truth' : 'Trick'}
+        </h3>
+        {promptContent && (
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 max-w-xs">
+            <p className="text-white text-sm leading-relaxed text-center">
+              {promptContent.length > 60 ? promptContent.substring(0, 60) + '...' : promptContent}
+            </p>
+          </div>
+        )}
+        <div className="mt-4 text-lg">🎯✨</div>
+      </div>
+    </div>
+  );
+};
 
 export type PromptType = "truth" | "trick";
 
 export type PromptSelectionProps = {
   selectedPlayer: IPlayerSelectedPayload | null; // Player data from PLAYER_SELECTED event
-  selectedPrompt?: PromptType | null; // Which prompt was selected (from server events)
+  selectedPrompt: PromptType | null; // Which prompt was selected (from server events)
+  promptContent?: string | null; // Content of the selected prompt (from server events)
   onPromptSelected?: (promptType: PromptType) => void; // Callback when player chooses truth/trick (for client)
 };
 
@@ -23,9 +133,236 @@ export type PromptSelectionProps = {
  * 1. PLAYER_SELECTED event provides player data
  * 2. PICK_PROMPT event signals to show this UI
  * 3. Player clicks Truth or Trick card
- * 4. Card flips and shows "Selected!"
- * 5. Stays visible until END_TURN event is received
+ * 4. Card flips and shows the question content
+ * 5. Popup closes when END_TURN event is received from server
  */
+// PixiCard component for smooth GPU-accelerated animations
+// const PixiCard = ({
+//   type,
+//   isSelected,
+//   isFront,
+//   promptContent,
+//   onClick,
+//   isInteractive
+// }: {
+//   type: 'truth' | 'trick';
+//   isSelected: boolean;
+//   isFront: boolean;
+//   promptContent?: string;
+//   onClick?: () => void;
+//   isInteractive?: boolean;
+// }) => {
+//   const [rotation, setRotation] = useState(0);
+//   const [scale, setScale] = useState(1);
+//   const [yOffset, setYOffset] = useState(0);
+
+//   // Animation loop for floating effect
+//   useEffect(() => {
+//     if (!isSelected) {
+//       const interval = setInterval(() => {
+//         setYOffset(prev => Math.sin(Date.now() * 0.003) * 5);
+//       }, 16); // 60fps
+//       return () => clearInterval(interval);
+//     }
+//   }, [isSelected]);
+
+//   // Selection animation
+//       useEffect(() => {
+//         if (isSelected) {
+//           setScale(1.2);
+//           setYOffset(-50);
+//           setRotation(isFront ? 180 : 0);
+//         } else {
+//           setScale(1);
+//           setYOffset(0);
+//           setRotation(0);
+//         }
+//       }, [isSelected, isFront]);
+
+//   const drawCard = (g: PIXI.Graphics) => {
+//     g.clear();
+
+//     // Card gradient background
+//     const colors = type === 'truth'
+//       ? [0x3b82f6, 0x1e40af, 0x1e3a8a] // Blue gradient
+//       : [0xef4444, 0xdc2626, 0xb91c1c]; // Red gradient
+
+//     // Main card shape with rounded corners
+//     g.beginFill(colors[0]);
+//     g.drawRoundedRect(-140, -180, 280, 360, 24);
+//     g.endFill();
+
+//     // Gradient overlay
+//     g.beginFill(colors[1], 0.8);
+//     g.drawRoundedRect(-140, -180, 280, 180, 24);
+//     g.endFill();
+
+//     g.beginFill(colors[2], 0.6);
+//     g.drawRoundedRect(-140, 0, 280, 180, 24);
+//     g.endFill();
+
+//     // Decorative circles
+//     g.lineStyle(2, 0xffffff, 0.2);
+//     g.drawCircle(-100, -120, 20);
+//     g.drawCircle(100, -120, 16);
+//     g.drawCircle(0, 0, 24);
+//     g.drawCircle(-80, 120, 12);
+//     g.drawCircle(80, 120, 18);
+//   };
+
+//   const cardWidth = 280;
+//   const cardHeight = 360;
+
+//   return (
+//     <motion.div
+//       className={`relative ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
+//       onClick={isInteractive ? onClick : undefined}
+//       whileHover={isInteractive ? { scale: 1.05 } : {}}
+//       whileTap={isInteractive ? { scale: 0.95 } : {}}
+//       style={{ width: cardWidth, height: cardHeight }}
+//     >
+//       <Application
+//         width={cardWidth}
+//         height={cardHeight}
+//         backgroundAlpha={0}
+//         className="rounded-3xl overflow-hidden"
+//       >
+//         <pixiContainer
+//           x={cardWidth / 2}
+//           y={cardHeight / 2}
+//           scale={scale}
+//           rotation={rotation * Math.PI / 180}
+//           // y={yOffset}
+//         >
+//           {/* Card Back */}
+//           <pixiGraphics draw={drawCard} />
+
+//           {/* Content */}
+//           {isFront ? (
+//             <pixiContainer>
+//               {/* Background Pattern */}
+//               <pixiGraphics
+//                 draw={(g: PIXI.Graphics) => {
+//                   g.clear();
+//                   g.lineStyle(2, 0xffffff, 0.15);
+//                   g.drawCircle(-80, -120, 16);
+//                   g.drawCircle(80, -120, 12);
+//                   g.drawCircle(0, 0, 20);
+//                 }}
+//               />
+
+//               {/* Icon */}
+//               <pixiText
+//                 text={type === 'truth' ? '❓' : '🎭'}
+//                 anchor={0.5}
+//                 x={0}
+//                 y={-80}
+//                 style={
+//                   new PIXI.TextStyle({
+//                     fontSize: 64,
+//                     fill: '#ffffff',
+//                   })
+//                 }
+//               />
+
+//               {/* Title */}
+//               <pixiText
+//                 text={type === 'truth' ? 'TRUTH' : 'TRICK'}
+//                 anchor={0.5}
+//                 x={0}
+//                 y={-20}
+//                 style={
+//                   new PIXI.TextStyle({
+//                     fontSize: 24,
+//                     fontWeight: 'bold',
+//                     fill: '#ffffff',
+//                     dropShadow: true,
+//                     // dropShadowColor: '#000000',
+//                     // dropShadowBlur: 4,
+//                     // dropShadowDistance: 2,
+//                   })
+//                 }
+//               />
+
+//               {/* Subtitle */}
+//               <pixiText
+//                 text={type === 'truth' ? 'Câu hỏi thật thà' : 'Câu hỏi thử thách'}
+//                 anchor={0.5}
+//                 x={0}
+//                 y={10}
+//                 style={
+//                   new PIXI.TextStyle({
+//                     fontSize: 16,
+//                     fill: type === 'truth' ? '#dbeafe' : '#fecaca',
+//                   })
+//                 }
+//               />
+
+//               {/* Content if available */}
+//               {promptContent && (
+//                 <pixiContainer y={60}>
+//                   <pixiGraphics
+//                     draw={(g: PIXI.Graphics) => {
+//                       g.clear();
+//                       g.beginFill(0xffffff, 0.1);
+//                       g.drawRoundedRect(-100, -30, 200, 60, 12);
+//                       g.endFill();
+//                     }}
+//                   />
+//                   <pixiText
+//                     text={promptContent.length > 50 ? promptContent.substring(0, 50) + '...' : promptContent}
+//                     anchor={0.5}
+//                     x={0}
+//                     y={0}
+//                     style={
+//                       new PIXI.TextStyle({
+//                         fontSize: 12,
+//                         fill: '#ffffff',
+//                         align: 'center',
+//                         wordWrap: true,
+//                         wordWrapWidth: 180,
+//                       })
+//                     }
+//                   />
+//                 </pixiContainer>
+//               )}
+//             </pixiContainer>
+//           ) : (
+//             /* Card Back Content */
+//             <pixiContainer>
+//               <pixiText
+//                 text="🎯"
+//                 anchor={0.5}
+//                 x={0}
+//                 y={-40}
+//                 style={
+//                   new PIXI.TextStyle({
+//                     fontSize: 48,
+//                     fill: '#ffffff',
+//                   })
+//                 }
+//               />
+//               <pixiText
+//                 text="Chọn để xem!"
+//                 anchor={0.5}
+//                 x={0}
+//                 y={20}
+//                 style={
+//                   new PIXI.TextStyle({
+//                     fontSize: 18,
+//                     fill: '#ffffff',
+//                     fontWeight: 'bold',
+//                   })
+//                 }
+//               />
+//             </pixiContainer>
+//           )}
+//         </pixiContainer>
+//       </Application>
+//     </motion.div>
+//   );
+// };
+
 // Generate stable particle positions to avoid hydration issues
 const generateParticles = (count: number) => {
   return Array.from({ length: count }, (_, i) => ({
@@ -36,11 +373,11 @@ const generateParticles = (count: number) => {
   }));
 };
 
-const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: PromptSelectionProps) => {
+const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onPromptSelected }: PromptSelectionProps) => {
   // selectedPlayer data comes from PLAYER_SELECTED event
   // PICK_PROMPT event just signals to show this UI
   // selectedPrompt comes from server events (TRUTH_PROMPT_SELECTED/TRICK_PROMPT_SELECTED)
-  // Component stays visible until END_TURN event is received
+  // Component closes when END_TURN event is received from server
 
   // Pre-calculate particles to avoid Math.random() in render
   const truthParticles = useMemo(() => generateParticles(12), []);
@@ -79,7 +416,7 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
             transition={{ delay: 0.2 }}
             className="text-center mb-12"
           >
-            <motion.div
+            {/* <motion.div
               animate={{ rotate: [0, -5, 5, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="inline-block mb-4"
@@ -91,25 +428,43 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
             </h2>
             <p className="text-white/70 text-xl font-medium">
               Chọn Truth hoặc Trick để bắt đầu
-            </p>
+            </p> */}
           </motion.div>
 
-          {/* Cards Container */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12">
+        {/* Cards Container */}
+        {!selectedPrompt ? (
+          /* Selection Phase - Show both cards */
+          <motion.div
+            key="selection-phase"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3 } }}
+            className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12"
+          >
             {/* Truth Card */}
             <motion.div
-              initial={{ x: -100, opacity: 0, rotateY: -15 }}
-              animate={{ x: 0, opacity: 1, rotateY: 0 }}
-              transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+              initial={{ x: -100, opacity: 0, rotateY: -15, scale: 0.9 }}
+              animate={{ x: 0, opacity: 1, rotateY: 0, scale: 1 }}
+              transition={{
+                delay: 0.4,
+                type: "spring",
+                stiffness: 300,
+                opacity: { duration: 0.4 },
+                scale: { duration: 0.5, ease: "easeOut" }
+              }}
               className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
               onClick={() => handlePromptClick("truth")}
               whileHover={onPromptSelected && !selectedPrompt ? {
                 scale: 1.08,
                 rotateY: 5,
                 rotateX: 5,
-                z: 50
+                z: 50,
+                transition: { duration: 0.2 }
               } : {}}
-              whileTap={onPromptSelected && !selectedPrompt ? { scale: 0.95 } : {}}
+              whileTap={onPromptSelected && !selectedPrompt ? {
+                scale: 0.95,
+                transition: { duration: 0.1 }
+              } : {}}
               suppressHydrationWarning={true}
             >
               {/* Glow Effect */}
@@ -152,31 +507,75 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
                   className="absolute inset-0 w-full h-full backface-hidden"
                   style={{ backfaceVisibility: "hidden" }}
                 >
-                  <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-600 via-blue-700 to-blue-900 flex flex-col items-center justify-center relative overflow-hidden">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8, duration: 0.4 }}
+                    className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-600 via-blue-700 to-blue-900 flex flex-col items-center justify-center relative overflow-hidden"
+                  >
                     {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-10">
-                      <div className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full" />
-                      <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full" />
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full" />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.0, duration: 0.3 }}
+                        className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full"
+                      />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.1, duration: 0.3 }}
+                        className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full"
+                      />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.2, duration: 0.3 }}
+                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
+                      />
                     </div>
 
                     <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      initial={{ scale: 0.5, opacity: 0, rotate: -180 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      transition={{ delay: 0.9, duration: 0.5, type: "spring", stiffness: 200 }}
                       className="text-8xl mb-6"
                     >
-                      ❓
+                      <motion.span
+                        animate={{ rotate: [0, 360] }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      >
+                        ❓
+                      </motion.span>
                     </motion.div>
-                    <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg">
+
+                    <motion.h3
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.1, duration: 0.4, ease: "easeOut" }}
+                      className="text-4xl font-black mb-3 text-white drop-shadow-lg"
+                    >
                       TRUTH
-                    </h3>
-                    <p className="text-blue-100 text-lg font-medium">
+                    </motion.h3>
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
+                      className="text-blue-100 text-lg font-medium"
+                    >
                       Câu hỏi thật thà
-                    </p>
-                    <div className="mt-6 text-2xl">
+                    </motion.p>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+                      className="mt-6 text-2xl"
+                    >
                       🤔💭
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
                 </motion.div>
 
                 {/* Card Front - Selected State */}
@@ -236,18 +635,28 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
 
             {/* Trick Card */}
             <motion.div
-              initial={{ x: 100, opacity: 0, rotateY: 15 }}
-              animate={{ x: 0, opacity: 1, rotateY: 0 }}
-              transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+              initial={{ x: 100, opacity: 0, rotateY: 15, scale: 0.9 }}
+              animate={{ x: 0, opacity: 1, rotateY: 0, scale: 1 }}
+              transition={{
+                delay: 0.6,
+                type: "spring",
+                stiffness: 300,
+                opacity: { duration: 0.4 },
+                scale: { duration: 0.5, ease: "easeOut" }
+              }}
               className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
               onClick={() => handlePromptClick("trick")}
               whileHover={onPromptSelected && !selectedPrompt ? {
                 scale: 1.08,
                 rotateY: -5,
                 rotateX: -5,
-                z: 50
+                z: 50,
+                transition: { duration: 0.2 }
               } : {}}
-              whileTap={onPromptSelected && !selectedPrompt ? { scale: 0.95 } : {}}
+              whileTap={onPromptSelected && !selectedPrompt ? {
+                scale: 0.95,
+                transition: { duration: 0.1 }
+              } : {}}
               suppressHydrationWarning={true}
             >
               {/* Glow Effect */}
@@ -290,31 +699,75 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
                   className="absolute inset-0 w-full h-full backface-hidden"
                   style={{ backfaceVisibility: "hidden" }}
                 >
-                  <div className="w-full h-full bg-gradient-to-br from-red-400 via-red-600 via-red-700 to-red-900 flex flex-col items-center justify-center relative overflow-hidden">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.0, duration: 0.4 }}
+                    className="w-full h-full bg-gradient-to-br from-red-400 via-red-600 via-red-700 to-red-900 flex flex-col items-center justify-center relative overflow-hidden"
+                  >
                     {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-10">
-                      <div className="absolute top-4 right-4 w-16 h-16 border-2 border-white/20 rounded-full" />
-                      <div className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/20 rounded-full" />
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full" />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.2, duration: 0.3 }}
+                        className="absolute top-4 right-4 w-16 h-16 border-2 border-white/20 rounded-full"
+                      />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.3, duration: 0.3 }}
+                        className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/20 rounded-full"
+                      />
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 1.4, duration: 0.3 }}
+                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
+                      />
                     </div>
 
                     <motion.div
-                      animate={{ rotate: [0, -360] }}
-                      transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                      initial={{ scale: 0.5, opacity: 0, rotate: 180 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      transition={{ delay: 1.1, duration: 0.5, type: "spring", stiffness: 200 }}
                       className="text-8xl mb-6"
                     >
-                      🎭
+                      <motion.span
+                        animate={{ rotate: [0, -360] }}
+                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                      >
+                        🎭
+                      </motion.span>
                     </motion.div>
-                    <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg">
+
+                    <motion.h3
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
+                      className="text-4xl font-black mb-3 text-white drop-shadow-lg"
+                    >
                       TRICK
-                    </h3>
-                    <p className="text-red-100 text-lg font-medium">
+                    </motion.h3>
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+                      className="text-red-100 text-lg font-medium"
+                    >
                       Câu hỏi thử thách
-                    </p>
-                    <div className="mt-6 text-2xl">
+                    </motion.p>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.7, duration: 0.4, ease: "easeOut" }}
+                      className="mt-6 text-2xl"
+                    >
                       😈🎪
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
                 </motion.div>
 
                 {/* Card Front - Selected State */}
@@ -371,11 +824,122 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
                 </motion.div>
               </motion.div>
             </motion.div>
-          </div>
+            </motion.div>
 
-          {/* Selected prompt indicator */}
+          ) : (
+            /* Selected Phase - Show only the selected card with content */
+            <motion.div
+              key="selected-phase"
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20, transition: { duration: 0.3 } }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="flex justify-center"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, rotateY: -180 }}
+                animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                transition={{ duration: 0.8, type: "spring", stiffness: 200, delay: 0.2 }}
+                className="w-80 sm:w-96 h-[480px] sm:h-[560px] rounded-3xl overflow-hidden shadow-2xl relative"
+                style={{ transformStyle: "preserve-3d" }}
+              >
+                {/* Card Front - Shows the question content */}
+                <motion.div
+                  className={`absolute inset-0 w-full h-full backface-hidden ${
+                    selectedPrompt === "truth"
+                      ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
+                      : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
+                  } flex flex-col items-center justify-center relative overflow-hidden`}
+                  style={{ backfaceVisibility: "hidden" }}
+                >
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full" />
+                    <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full" />
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full" />
+                  </div>
+
+                  {/* Content */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
+                    className="text-center px-8 z-10"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.6, duration: 0.4, ease: "easeOut" }}
+                      className="text-7xl mb-6"
+                    >
+                      <motion.span
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        {selectedPrompt === "truth" ? "❓" : "🎭"}
+                      </motion.span>
+                    </motion.div>
+
+                    <motion.h3
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8, duration: 0.4, ease: "easeOut" }}
+                      className="text-3xl font-black mb-4 text-white drop-shadow-lg uppercase"
+                    >
+                      {selectedPrompt === "truth" ? "Truth" : "Trick"}
+                    </motion.h3>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.0, duration: 0.5, ease: "easeOut" }}
+                      className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20"
+                    >
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.2, duration: 0.3 }}
+                        className="text-white text-lg leading-relaxed font-medium"
+                      >
+                        {promptContent || "Đang tải câu hỏi..."}
+                      </motion.p>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.4, duration: 0.4, ease: "easeOut" }}
+                      className="mt-6 text-2xl"
+                    >
+                      🎯✨
+                    </motion.div>
+                  </motion.div>
+                </motion.div>
+
+                {/* Card Back - Hidden after flip */}
+                <motion.div
+                  className={`absolute inset-0 w-full h-full backface-hidden ${
+                    selectedPrompt === "truth"
+                      ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
+                      : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
+                  } flex flex-col items-center justify-center relative overflow-hidden`}
+                  style={{
+                    backfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)"
+                  }}
+                >
+                  <div className="text-6xl mb-4">🎯</div>
+                  <h3 className="text-2xl font-bold text-white">Đã chọn!</h3>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          )}
+
+        </motion.div>
+
+        {/* Selected prompt indicator - Only show when not displaying the card */}
+        {selectedPrompt && !promptContent && (
           <MotionAnimatePresence>
-            {selectedPrompt && (
               <motion.div
                 initial={{ opacity: 0, y: 30, scale: 0.8 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -418,9 +982,8 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, onPromptSelected }: P
                   </motion.span>
                 </motion.div>
               </motion.div>
-            )}
-          </MotionAnimatePresence>
-        </motion.div>
+            </MotionAnimatePresence>
+          )}
       </MotionDiv>
     </MotionAnimatePresence>
   );

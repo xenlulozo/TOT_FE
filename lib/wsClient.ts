@@ -3,7 +3,7 @@ import { SocketEnum } from "./socket.enum";
 import { IHostPayload } from "@/components/colyseus/interface/host.interface";
 
 async function resolveEndpoint(): Promise<string> {
-  const rawEnv =  await ( "ws://localhost:2567").trim();
+  const rawEnv =  await ( "ws://192.168.10.100:2567").trim();
 
   if (rawEnv.length > 0) {
     try {
@@ -26,11 +26,12 @@ async function resolveEndpoint(): Promise<string> {
   }
 
   // SSR / tests
-  return "ws://127.0.0.1:2567";
+  return "ws://192.168.10.100:2567";
 }
 
 export async function showConnectionStatus(roomId: string , host : string | undefined) {
   const endpoint =await resolveEndpoint();
+  console.log("🚀 ~ showConnectionStatus ~ endpoint:", endpoint)
 
 
   try {
@@ -44,7 +45,7 @@ export async function showConnectionStatus(roomId: string , host : string | unde
     else{
       
       room = await client.joinOrCreate("my_room" );
-      room.send(SocketEnum.SET_ROOM_HOST, { roomId  : room.roomId , url : "localhost:3000/new/"+roomId +'/' + room.roomId });
+      room.send(SocketEnum.SET_ROOM_HOST, { roomId  : room.roomId , url : "192.168.10.100:3000/new/"+roomId +'/' + room.roomId });
     }
 
     if(!room) return ;

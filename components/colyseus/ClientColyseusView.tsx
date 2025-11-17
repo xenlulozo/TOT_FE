@@ -50,6 +50,7 @@ export type ClientViewProps = {
     gameStarted: boolean;
     selectedPlayer?: IPlayerSelectedPayload | null;
     showPromptSelection?: boolean;
+    promptContent?: string | null;
     onUpdateProfile: (profile: { name: string; avatar: string }) => void;
     onStartGame: () => void;
     onSelectedPlayerClose?: () => void;
@@ -130,16 +131,18 @@ const PixiWelcomeCard = ({ width, height }: { width: number; height: number }) =
     );
 };
 
-const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPromptSelection, onUpdateProfile, onStartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
+const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPromptSelection, promptContent, onUpdateProfile, onStartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
     // Local state to control popup visibility
     const [localShowPromptSelection, setLocalShowPromptSelection] = useState(showPromptSelection);
 
     // Debug wrapper for onPromptSelected
     const handlePromptSelected = (promptType: "truth" | "trick") => {
         console.log("🎯 ClientColyseusView: handlePromptSelected called with", promptType);
+        console.log("🔍 ClientColyseusView: onPromptSelected callback exists?", !!onPromptSelected);
         if (onPromptSelected) {
             console.log("📤 ClientColyseusView: Calling onPromptSelected callback");
             onPromptSelected(promptType);
+            console.log("✅ ClientColyseusView: onPromptSelected callback called successfully");
         } else {
             console.log("❌ ClientColyseusView: onPromptSelected callback is undefined");
         }
@@ -188,6 +191,28 @@ const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPr
             setSelectedAvatar(me.avatar);
         }
     }, [me.avatar]);
+
+    // Auto-generate random profile when client connects and game hasn't started
+    useEffect(() => {
+        if (!gameStarted && onUpdateProfile && (!me.name || !me.avatar)) {
+            console.log("🎲 ClientColyseusView: Auto-generating random profile for new client");
+
+            const randomName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+            const randomAvatar = AVATAR_OPTIONS[Math.floor(Math.random() * AVATAR_OPTIONS.length)].id;
+
+            console.log("🎲 ClientColyseusView: Generated profile:", { name: randomName, avatar: randomAvatar });
+
+            // Update local state
+            setNameInput(randomName);
+            setSelectedAvatar(randomAvatar);
+
+            // Send to server
+            onUpdateProfile({
+                name: randomName,
+                avatar: randomAvatar,
+            });
+        }
+    }, [gameStarted, onUpdateProfile, me.name, me.avatar]);
 
     const trimmedName = nameInput.trim();
     const isNameDirty = trimmedName !== (currentPlayer.name || "");
@@ -457,6 +482,7 @@ const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPr
                 {localShowPromptSelection && (
                     <ClientPromptPopup
                         selectedPlayer={selectedPlayer || null} // Có thể null ban đầu, sẽ update khi PLAYER_SELECTED đến
+                        promptContent={promptContent}
                         onPromptSelected={handlePromptSelected}
                         onEndTurn={onEndTurn || (() => { })}
                         onClose={handleClosePromptPopup}

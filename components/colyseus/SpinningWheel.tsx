@@ -5,43 +5,6 @@ import { useEffect, useState } from "react";
 import { IPlayerInfo, RoundState } from "@/types/socket";
 import { config } from "@/lib/socket.enum";
 
-const AVATAR_EMOJI: Record<string, string> = {
-    fox: "🦊",
-    bear: "🐻",
-    tiger: "🐯",
-    panda: "🐼",
-    koala: "🐨",
-    monkey: "🐵",
-    unicorn: "🦄",
-    cat: "🐱",
-    dog: "🐶",
-    rabbit: "🐰",
-    pig: "🐷",
-    chicken: "🐔",
-    lion: "🦁",
-    cow: "🐮",
-    sheep: "🐑",
-    elephant: "🐘",
-    heart: "❤️",
-    star: "⭐️",
-    tree: "🌳",
-    mushroom: "🍄",
-    tulip: "🌷",
-    cactus: "🌵",
-    wrench: "🔧",
-    hammer: "🔨",
-    key: "🔑",
-    lightbulb: "💡",
-    umbrella: "☂️",
-    book: "📚",
-    camera: "📷",
-    guitar: "🎸",
-    donut: "🍩",
-    pizza: "🍕",
-    cheese: "🧀",
-    watermelon: "🍉",
-    lemon: "🍋"
-};
 
 const SEGMENT_COLORS = [
     { start: "#a855f7", end: "#9333ea" }, // purple
@@ -192,7 +155,6 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = c
                         const textX = centerX + textRadius * Math.cos(midAngle);
                         const textY = centerY + textRadius * Math.sin(midAngle);
 
-                        const avatarEmoji = AVATAR_EMOJI[player.avatar] || "🎮";
                         const colorIndex = index % SEGMENT_COLORS.length;
 
                         return (
@@ -204,46 +166,35 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = c
                                     strokeWidth="2"
                                     className="transition-opacity"
                                 />
-                                {/* Avatar emoji */}
+                                {/* Player name - centered in segment */}
                                 <text
                                     x={textX}
-                                    y={textY - 15}
+                                    y={textY}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fontSize="24"
+                                    fontSize="14"
+                                    fontWeight="700"
                                     fill="#ffffff"
-                                    className="pointer-events-none select-none"
-                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY - 15})`}
+                                    className="pointer-events-none select-none drop-shadow-lg"
+                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY})`}
                                 >
-                                    {avatarEmoji}
-                                </text>
-                                {/* Player name - rotated to follow segment direction */}
-                                <text
-                                    x={textX}
-                                    y={textY + 10}
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    fontSize="12"
-                                    fontWeight="600"
-                                    fill="#ffffff"
-                                    className="pointer-events-none select-none"
-                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY + 10})`}
-                                >
-                                    {player.name?.slice(0, 8) || "Player"}
+                                    {player.name?.slice(0, 10) || "Player"}
                                 </text>
                             </g>
                         );
                     })}
                 </motion.svg>
 
-                {/* Mũi tên chỉ vào segment */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10">
-                    <svg width="40" height="40" viewBox="0 0 40 40">
+                {/* Mũi tên chỉ vào bánh xe từ phía trên */}
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 translate-y-2 z-30">
+                    <svg width="50" height="35" viewBox="0 0 30 25"         className="rotate-180"
+                    >
                         <path
-                            d="M 20 0 L 0 40 L 40 40 Z"
-                            fill="#fbbf24"
-                            stroke="#f59e0b"
-                            strokeWidth="2"
+                            d="M 15 0 L 0 25 L 30 25 Z"
+                            fill="#ef4444"
+                            stroke="#dc2626"
+                            strokeWidth="1"
+                            className="drop-shadow-lg"
                         />
                     </svg>
                 </div>

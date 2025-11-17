@@ -47,6 +47,8 @@ const PixiRoomPage = () => {
     const [selectedPlayer, setSelectedPlayer] = useState<IPlayerSelectedPayload | null>(null);
     const [showPromptSelection, setShowPromptSelection] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<"truth" | "trick" | null>(null);
+    const [promptContent, setPromptContent] = useState<string | null>(null);
+    const [showTurnCountdown, setShowTurnCountdown] = useState<boolean>(false);
 
     // Ref to store room for cleanup
     const roomRef = useRef<Room | null>(null);
@@ -226,24 +228,28 @@ const PixiRoomPage = () => {
                 });
 
                 // Handle TRUTH_PROMPT_SELECTED event
-                connectedRoom.onMessage(SocketEnum.TRUTH_PROMPT_SELECTED, (message: { playerId: string; prompt?: unknown } | unknown) => {
+                connectedRoom.onMessage(SocketEnum.TRUTH_PROMPT_SELECTED, (message: { playerId: string; content?: string; prompt?: unknown } | unknown) => {
                     console.log("🚀 ~ TRUTH_PROMPT_SELECTED received:", message);
 
                     if (typeof message === 'object' && message !== null) {
+                        const payload = message as { playerId: string; content?: string; prompt?: unknown };
                         setSelectedPrompt("truth");
+                        setPromptContent(payload.content || null);
                         // Don't hide prompt selection - wait for END_TURN event
-                        console.log("🚀 ~ Truth prompt selected");
+                        console.log("🚀 ~ Truth prompt selected with content:", payload.content);
                     }
                 });
 
                 // Handle TRICK_PROMPT_SELECTED event
-                connectedRoom.onMessage(SocketEnum.TRICK_PROMPT_SELECTED, (message: { playerId: string; prompt?: unknown } | unknown) => {
+                connectedRoom.onMessage(SocketEnum.TRICK_PROMPT_SELECTED, (message: { playerId: string; content?: string; prompt?: unknown } | unknown) => {
                     console.log("🚀 ~ TRICK_PROMPT_SELECTED received:", message);
 
                     if (typeof message === 'object' && message !== null) {
+                        const payload = message as { playerId: string; content?: string; prompt?: unknown };
                         setSelectedPrompt("trick");
+                        setPromptContent(payload.content || null);
                         // Don't hide prompt selection - wait for END_TURN event
-                        console.log("🚀 ~ Trick prompt selected");
+                        console.log("🚀 ~ Trick prompt selected with content:", payload.content);
                     }
                 });
 
@@ -252,11 +258,12 @@ const PixiRoomPage = () => {
                     console.log("🚀 ~ END_TURN received:", message);
                     console.log("🚀 ~ Before END_TURN - showPromptSelection:", showPromptSelection);
 
-                    // Only reset if this is from server (not from user clicking end turn)
-                    // Client popups should be closed by user action, not server event
+                    // Reset all states and close popup when END_TURN is received from server
                     setSelectedPrompt(null);
+                    setPromptContent(null); // Clear prompt content
                     setSelectedPlayer(null); // Clear selected player
-                    console.log("🚀 ~ END_TURN received from server - states partially reset");
+                    setShowPromptSelection(false); // Close the prompt selection popup
+                    console.log("🚀 ~ END_TURN received from server - popup closed and states reset");
                 });
 
                 // Listen to room state changes if available
@@ -367,14 +374,25 @@ const PixiRoomPage = () => {
         console.log("🎯 page.tsx: handlePromptSelected called with", promptType);
         console.log("🔍 page.tsx: room exists?", !!room);
         console.log("🔍 page.tsx: selectedPlayer exists?", !!selectedPlayer);
+        console.log("🔍 page.tsx: selectedPlayer data:", selectedPlayer);
 
-        if (room && selectedPlayer) {
+        // Always try to send the event, even if selectedPlayer is not available yet
+        // The server should handle this case
+        if (room) {
             const eventType = promptType === "truth" ? SocketEnum.TRUTH_PROMPT_SELECTED : SocketEnum.TRICK_PROMPT_SELECTED;
-            console.log(`📤 page.tsx: Sending ${eventType} with playerId:`, selectedPlayer.player.id);
-            room.send(eventType, { playerId: selectedPlayer.player.id });
-            console.log(`🚀 ~ handlePromptSelected ~ ${eventType} sent for player:`, selectedPlayer.player.name);
+            console.log(`📤 page.tsx: Sending ${eventType} with playerId:`, selectedPlayer?.player?.id || "unknown");
+
+            // Send with playerId if available, otherwise just send the event type
+            if (selectedPlayer?.player?.id) {
+                room.send(eventType, { playerId: selectedPlayer.player.id });
+                console.log(`🚀 ~ handlePromptSelected ~ ${eventType} sent for player:`, selectedPlayer.player.name);
+            } else {
+                // Fallback: send without playerId - server should know which player this is
+                room.send(eventType);
+                console.log(`🚀 ~ handlePromptSelected ~ ${eventType} sent (no playerId available yet)`);
+            }
         } else {
-            console.log("❌ page.tsx: Cannot send event - room or selectedPlayer missing");
+            console.log("❌ page.tsx: Cannot send event - room not available");
         }
     };
 
@@ -382,7 +400,14 @@ const PixiRoomPage = () => {
         if (room) {
             room.send(SocketEnum.END_TURN);
             console.log("🚀 ~ handleEndTurn ~ END_TURN sent");
+
+            // Trigger countdown for next turn (for host view)
+            setShowTurnCountdown(true);
         }
+    };
+
+    const handleTurnCountdownComplete = () => {
+        setShowTurnCountdown(false);
     };
 
     // Show loading state while connecting
@@ -427,6 +452,9 @@ const PixiRoomPage = () => {
                 onSelectedPlayerClose={() => setSelectedPlayer(null)}
                 showPromptSelection={showPromptSelection}
                 selectedPrompt={selectedPrompt}
+                promptContent={promptContent}
+                showTurnCountdown={showTurnCountdown}
+                onTurnCountdownComplete={handleTurnCountdownComplete}
                 onPromptSelected={handlePromptSelected}
             />
         );
@@ -439,6 +467,7 @@ const PixiRoomPage = () => {
                 gameStarted={gameStarted}
                 selectedPlayer={selectedPlayer}
                 showPromptSelection={showPromptSelection}
+                promptContent={promptContent}
                 onUpdateProfile={handleUpdateProfile}
                 onStartGame={handleStartGame}
                 onSelectedPlayerClose={() => setSelectedPlayer(null)}
