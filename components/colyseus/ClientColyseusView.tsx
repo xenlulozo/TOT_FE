@@ -48,11 +48,13 @@ export type ClientViewProps = {
     roomState: IRoomStatePayload;
     me: IPlayerInfo;
     gameStarted: boolean;
+    gameEnded?: boolean;
     selectedPlayer?: IPlayerSelectedPayload | null;
     showPromptSelection?: boolean;
     promptContent?: string | null;
     onUpdateProfile: (profile: { name: string; avatar: string }) => void;
     onStartGame: () => void;
+    onRestartGame?: () => void;
     onSelectedPlayerClose?: () => void;
     onPromptSelected?: (promptType: "truth" | "trick") => void;
     onEndTurn?: () => void;
@@ -131,7 +133,7 @@ const PixiWelcomeCard = ({ width, height }: { width: number; height: number }) =
     );
 };
 
-const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPromptSelection, promptContent, onUpdateProfile, onStartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
+const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPlayer, showPromptSelection, promptContent, onUpdateProfile, onStartGame, onRestartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
     // Local state to control popup visibility
     const [localShowPromptSelection, setLocalShowPromptSelection] = useState(showPromptSelection);
 
@@ -390,11 +392,28 @@ const ClientColyseusView = ({ roomState, me, gameStarted, selectedPlayer, showPr
                 )}
 
                 {/* Game Started Message */}
-                {gameStarted && !showCountdown && (
+                {gameStarted && !showCountdown && !gameEnded && (
                     <div className="rounded-3xl border border-white/20 bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-md p-6 shadow-xl">
                         <div className="text-center">
                             <p className="text-2xl font-bold text-white mb-2">🎉 Trò chơi đã bắt đầu!</p>
                             <p className="text-indigo-200">Chúc bạn may mắn!</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Game Ended - Restart Button */}
+                {gameEnded && (
+                    <div className="rounded-3xl border border-white/20 bg-gradient-to-r from-orange-500/20 to-red-500/20 backdrop-blur-md p-6 shadow-xl">
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-white mb-4">🏁 Trò chơi đã kết thúc!</p>
+                            <p className="text-indigo-200 mb-6">Bạn có muốn chơi lại không?</p>
+                            <button
+                                type="button"
+                                onClick={onRestartGame}
+                                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 font-bold text-xl text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all transform"
+                            >
+                                🔄 Chơi lại
+                            </button>
                         </div>
                     </div>
                 )}

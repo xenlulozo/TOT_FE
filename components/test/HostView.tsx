@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState, useRef } from "react";
 import type { PlayerInfo, PlayerSelectedPayload, PromptOption, RoomStatePayload, TotPromptType } from "@/types/socket";

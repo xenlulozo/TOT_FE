@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 import { Application, extend } from "@pixi/react";
 import { Container as PixiContainer, Graphics as PixiGraphics, Text as PixiText } from "pixi.js";

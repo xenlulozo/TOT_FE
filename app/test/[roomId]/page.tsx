@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import HostView from "@/components/test/HostView";
 import PlayerView from "@/components/test/PlayerView";
 import { connectSocket, getSocket } from "@/lib/socketClient";

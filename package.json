@@ -11,8 +11,8 @@
   "dependencies": {
     "@pixi/react": "^8.0.3",
     "colyseus.js": "^0.16.22",
-    "framer-motion": "^12.23.24",
     "howler": "^2.2.4",
+    "motion": "^12.23.24",
     "next": "16.0.1",
     "pixi.js": "^8.14.1",
     "qrcode.react": "^4.2.0",

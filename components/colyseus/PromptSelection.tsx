@@ -1,7 +1,7 @@
 "use client";
 
 import React, {  useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { Application, extend } from "@pixi/react";
 import { Container, Graphics, Text } from "pixi.js";
 import * as PIXI from "pixi.js";
@@ -373,7 +373,7 @@ const generateParticles = (count: number) => {
   }));
 };
 
-const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onPromptSelected }: PromptSelectionProps) => {
+export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onPromptSelected }: PromptSelectionProps) => {
   // selectedPlayer data comes from PLAYER_SELECTED event
   // PICK_PROMPT event just signals to show this UI
   // selectedPrompt comes from server events (TRUTH_PROMPT_SELECTED/TRICK_PROMPT_SELECTED)
@@ -394,18 +394,60 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
   const player = selectedPlayer?.player;
 
   return (
-    <MotionAnimatePresence>
-      <MotionDiv
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+    <AnimatePresence mode="wait">
+      <motion.div
+        key="prompt-selection-overlay"
+        initial={{
+          opacity: 0,
+          backdropFilter: "blur(0px)",
+          backgroundColor: "rgba(0, 0, 0, 0)"
+        }}
+        animate={{
+          opacity: 1,
+          backdropFilter: "blur(8px)",
+          backgroundColor: "rgba(0, 0, 0, 0.9)"
+        }}
+        exit={{
+          opacity: 0,
+          backdropFilter: "blur(0px)",
+          backgroundColor: "rgba(0, 0, 0, 0)",
+          transition: { duration: 0.4, ease: "easeInOut" }
+        }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="fixed inset-0 z-50 flex items-center justify-center"
         suppressHydrationWarning={true}
       >
         <motion.div
-          initial={{ scale: 0.8, y: 50 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.8, y: 50 }}
+          initial={{
+            scale: 0.7,
+            y: 60,
+            opacity: 0,
+            rotateX: 15
+          }}
+          animate={{
+            scale: 1,
+            y: 0,
+            opacity: 1,
+            rotateX: 0
+          }}
+          exit={{
+            scale: 0.7,
+            y: 60,
+            opacity: 0,
+            rotateX: 15,
+            transition: {
+              duration: 0.4,
+              ease: "easeInOut",
+              opacity: { duration: 0.3 }
+            }
+          }}
+          transition={{
+            duration: 0.5,
+            ease: "easeOut",
+            type: "spring",
+            stiffness: 300,
+            damping: 30
+          }}
           className="relative w-full max-w-4xl mx-4"
           suppressHydrationWarning={true}
         >
@@ -436,21 +478,44 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
           /* Selection Phase - Show both cards */
           <motion.div
             key="selection-phase"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3 } }}
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{
+              opacity: 0,
+              scale: 0.9,
+              y: 30,
+              transition: { duration: 0.4, ease: "easeInOut" }
+            }}
+            transition={{
+              duration: 0.6,
+              ease: "easeOut",
+              staggerChildren: 0.15,
+              delayChildren: 0.3
+            }}
             className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12"
           >
             {/* Truth Card */}
             <motion.div
-              initial={{ x: -100, opacity: 0, rotateY: -15, scale: 0.9 }}
-              animate={{ x: 0, opacity: 1, rotateY: 0, scale: 1 }}
+              initial={{
+                x: -120,
+                opacity: 0,
+                rotateY: -20,
+                scale: 0.8,
+                filter: "blur(4px)"
+              }}
+              animate={{
+                x: 0,
+                opacity: 1,
+                rotateY: 0,
+                scale: 1,
+                filter: "blur(0px)"
+              }}
               transition={{
-                delay: 0.4,
                 type: "spring",
-                stiffness: 300,
-                opacity: { duration: 0.4 },
-                scale: { duration: 0.5, ease: "easeOut" }
+                stiffness: 400,
+                damping: 25,
+                opacity: { duration: 0.5 },
+                scale: { duration: 0.6, ease: "easeOut" }
               }}
               className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
               onClick={() => handlePromptClick("truth")}
@@ -635,14 +700,26 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
 
             {/* Trick Card */}
             <motion.div
-              initial={{ x: 100, opacity: 0, rotateY: 15, scale: 0.9 }}
-              animate={{ x: 0, opacity: 1, rotateY: 0, scale: 1 }}
+              initial={{
+                x: 120,
+                opacity: 0,
+                rotateY: 20,
+                scale: 0.8,
+                filter: "blur(4px)"
+              }}
+              animate={{
+                x: 0,
+                opacity: 1,
+                rotateY: 0,
+                scale: 1,
+                filter: "blur(0px)"
+              }}
               transition={{
-                delay: 0.6,
                 type: "spring",
-                stiffness: 300,
-                opacity: { duration: 0.4 },
-                scale: { duration: 0.5, ease: "easeOut" }
+                stiffness: 400,
+                damping: 25,
+                opacity: { duration: 0.5 },
+                scale: { duration: 0.6, ease: "easeOut" }
               }}
               className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
               onClick={() => handlePromptClick("trick")}
@@ -830,16 +907,54 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
             /* Selected Phase - Show only the selected card with content */
             <motion.div
               key="selected-phase"
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: -20, transition: { duration: 0.3 } }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              initial={{
+                opacity: 0,
+                scale: 0.6,
+                y: 40,
+                filter: "blur(8px)"
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                filter: "blur(0px)"
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.6,
+                y: -40,
+                filter: "blur(8px)",
+                transition: { duration: 0.5, ease: "easeInOut" }
+              }}
+              transition={{
+                duration: 0.7,
+                ease: "easeOut",
+                type: "spring",
+                stiffness: 300,
+                damping: 25
+              }}
               className="flex justify-center"
             >
               <motion.div
-                initial={{ scale: 0.8, opacity: 0, rotateY: -180 }}
-                animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-                transition={{ duration: 0.8, type: "spring", stiffness: 200, delay: 0.2 }}
+                initial={{
+                  scale: 0.5,
+                  opacity: 0,
+                  rotateY: -90,
+                  filter: "blur(6px)"
+                }}
+                animate={{
+                  scale: 1,
+                  opacity: 1,
+                  rotateY: 0,
+                  filter: "blur(0px)"
+                }}
+                transition={{
+                  duration: 1.0,
+                  type: "spring",
+                  stiffness: 250,
+                  damping: 20,
+                  delay: 0.1
+                }}
                 className="w-80 sm:w-96 h-[480px] sm:h-[560px] rounded-3xl overflow-hidden shadow-2xl relative"
                 style={{ transformStyle: "preserve-3d" }}
               >
@@ -861,15 +976,35 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
 
                   {/* Content */}
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{
+                      delay: 0.5,
+                      duration: 0.6,
+                      ease: "easeOut",
+                      staggerChildren: 0.2
+                    }}
                     className="text-center px-8 z-10"
                   >
                     <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.6, duration: 0.4, ease: "easeOut" }}
+                      initial={{
+                        scale: 0.3,
+                        opacity: 0,
+                        rotate: -180,
+                        filter: "blur(4px)"
+                      }}
+                      animate={{
+                        scale: 1,
+                        opacity: 1,
+                        rotate: 0,
+                        filter: "blur(0px)"
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        ease: "easeOut",
+                        type: "spring",
+                        stiffness: 200
+                      }}
                       className="text-7xl mb-6"
                     >
                       <motion.span
@@ -881,24 +1016,57 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
                     </motion.div>
 
                     <motion.h3
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8, duration: 0.4, ease: "easeOut" }}
+                      initial={{
+                        opacity: 0,
+                        y: 20,
+                        scale: 0.8,
+                        filter: "blur(2px)"
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        filter: "blur(0px)"
+                      }}
+                      transition={{
+                        duration: 0.6,
+                        ease: "easeOut",
+                        type: "spring",
+                        stiffness: 300
+                      }}
                       className="text-3xl font-black mb-4 text-white drop-shadow-lg uppercase"
                     >
                       {selectedPrompt === "truth" ? "Truth" : "Trick"}
                     </motion.h3>
 
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.0, duration: 0.5, ease: "easeOut" }}
+                      initial={{
+                        opacity: 0,
+                        scale: 0.7,
+                        y: 20,
+                        filter: "blur(3px)"
+                      }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                        y: 0,
+                        filter: "blur(0px)"
+                      }}
+                      transition={{
+                        duration: 0.7,
+                        ease: "easeOut",
+                        delay: 0.2
+                      }}
                       className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20"
                     >
                       <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.2, duration: 0.3 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          delay: 0.5,
+                          duration: 0.4,
+                          ease: "easeOut"
+                        }}
                         className="text-white text-lg leading-relaxed font-medium"
                       >
                         {promptContent || "Đang tải câu hỏi..."}
@@ -939,53 +1107,51 @@ const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onProm
 
         {/* Selected prompt indicator - Only show when not displaying the card */}
         {selectedPrompt && !promptContent && (
-          <MotionAnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, y: 30, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -30, scale: 0.8 }}
-                className="text-center mt-12"
-                suppressHydrationWarning={true}
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.8 }}
+            className="text-center mt-12"
+            suppressHydrationWarning={true}
+          >
+            <motion.div
+              className="inline-flex items-center gap-4 bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md rounded-2xl px-8 py-4 border border-white/20 shadow-2xl"
+              animate={{
+                boxShadow: [
+                  '0 0 20px rgba(255,255,255,0.1)',
+                  '0 0 40px rgba(255,255,255,0.2)',
+                  '0 0 20px rgba(255,255,255,0.1)'
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <motion.span
+                className="text-4xl"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               >
-                <motion.div
-                  className="inline-flex items-center gap-4 bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md rounded-2xl px-8 py-4 border border-white/20 shadow-2xl"
-                  animate={{
-                    boxShadow: [
-                      '0 0 20px rgba(255,255,255,0.1)',
-                      '0 0 40px rgba(255,255,255,0.2)',
-                      '0 0 20px rgba(255,255,255,0.1)'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <motion.span
-                    className="text-4xl"
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    {selectedPrompt === "truth" ? "❓" : "🎭"}
-                  </motion.span>
-                  <div className="flex flex-col items-start">
-                    <span className="text-white font-black text-xl tracking-wide">
-                      ĐÃ CHỌN
-                    </span>
-                    <span className="text-white/90 font-bold text-2xl uppercase tracking-wider">
-                      {selectedPrompt === "truth" ? "TRUTH" : "TRICK"}
-                    </span>
-                  </div>
-                  <motion.span
-                    className="text-3xl"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    ✨
-                  </motion.span>
-                </motion.div>
-              </motion.div>
-            </MotionAnimatePresence>
-          )}
-      </MotionDiv>
-    </MotionAnimatePresence>
+                {selectedPrompt === "truth" ? "❓" : "🎭"}
+              </motion.span>
+              <div className="flex flex-col items-start">
+                <span className="text-white font-black text-xl tracking-wide">
+                  ĐÃ CHỌN
+                </span>
+                <span className="text-white/90 font-bold text-2xl uppercase tracking-wider">
+                  {selectedPrompt === "truth" ? "TRUTH" : "TRICK"}
+                </span>
+              </div>
+              <motion.span
+                className="text-3xl"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+              >
+                ✨
+              </motion.span>
+            </motion.div>
+          </motion.div>
+        )}
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

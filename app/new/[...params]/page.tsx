@@ -49,6 +49,7 @@ const PixiRoomPage = () => {
     const [selectedPrompt, setSelectedPrompt] = useState<"truth" | "trick" | null>(null);
     const [promptContent, setPromptContent] = useState<string | null>(null);
     const [showTurnCountdown, setShowTurnCountdown] = useState<boolean>(false);
+    const [gameEnded, setGameEnded] = useState<boolean>(false);
 
     // Ref to store room for cleanup
     const roomRef = useRef<Room | null>(null);
@@ -266,6 +267,13 @@ const PixiRoomPage = () => {
                     console.log("🚀 ~ END_TURN received from server - popup closed and states reset");
                 });
 
+                // Handle END_GAME event - signal game has ended
+                connectedRoom.onMessage(SocketEnum.END_GAME, (message: unknown) => {
+                    console.log("🚀 ~ END_GAME received:", message);
+                    setGameEnded(true);
+                    console.log("🚀 ~ Game ended, showing restart button for clients");
+                });
+
                 // Listen to room state changes if available
                 if (connectedRoom.state) {
                     // Handle initial state
@@ -340,6 +348,21 @@ const PixiRoomPage = () => {
             // Assuming there's a RESTART_GAME message type, or reuse START_GAME
             room.send(SocketEnum.START_GAME);
             console.log("🚀 ~ handleRestartGame ~ RESTART_GAME sent");
+            setGameStarted(false);
+            setTurnFinished(false);
+            setSelected(null);
+            setPromptChoice(null);
+            setIsSpinning(false);
+        }
+    };
+
+    const handleClientRestartGame = () => {
+        if (room) {
+            // Client requests to restart game
+            room.send(SocketEnum.PLAY_AGAIN);
+            console.log("🚀 ~ handleClientRestartGame ~ Client requested game restart");
+            // Reset game states for client
+            setGameEnded(false);
             setGameStarted(false);
             setTurnFinished(false);
             setSelected(null);
@@ -465,11 +488,13 @@ const PixiRoomPage = () => {
                 roomState={roomState}
                 me={me}
                 gameStarted={gameStarted}
+                gameEnded={gameEnded}
                 selectedPlayer={selectedPlayer}
                 showPromptSelection={showPromptSelection}
                 promptContent={promptContent}
                 onUpdateProfile={handleUpdateProfile}
                 onStartGame={handleStartGame}
+                onRestartGame={handleClientRestartGame}
                 onSelectedPlayerClose={() => setSelectedPlayer(null)}
                 onPromptSelected={handlePromptSelected}
                 onEndTurn={handleEndTurn}
