@@ -74,6 +74,7 @@ export type HostViewProps = {
     showTurnCountdown?: boolean; // Trigger countdown for next turn
     onTurnCountdownComplete?: () => void; // Callback when countdown completes
     onPromptSelected?: (promptType: "truth" | "trick") => void;
+    gameEnded?: boolean; // Game has ended
 };
 
 const HostColyseusView = ({
@@ -101,6 +102,7 @@ const HostColyseusView = ({
     showTurnCountdown,
     onTurnCountdownComplete,
     onPromptSelected,
+    gameEnded,
 }: HostViewProps) => {
     // Filter players: loại bỏ host và những player có status là completed
     // wheelPlayers luôn loại bỏ host để host không xuất hiện trong bánh xe
@@ -400,9 +402,10 @@ const HostColyseusView = ({
         );
     };
 
-    // Nếu game đã bắt đầu, hiển thị layout với bánh xe, danh sách và thẻ bài
+    // Nếu game đã bắt đầu và chưa kết thúc, hiển thị layout với bánh xe, danh sách và thẻ bài
+    // Khi game kết thúc, quay về UI ban đầu (QR code)
     // Bánh xe luôn hiển thị ngay từ khi game bắt đầu
-    if (gameStarted) {
+    if (gameStarted && !gameEnded) {
         return (
             <div className="h-screen overflow-hidden flex flex-col">
                 <div className="flex-1 flex gap-6">

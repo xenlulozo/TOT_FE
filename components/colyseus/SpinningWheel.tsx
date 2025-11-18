@@ -188,13 +188,17 @@ export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinT
                                     y={textY}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fontSize="14"
+                                    fontSize="2vh"
                                     fontWeight="700"
                                     fill="#ffffff"
                                     className="pointer-events-none select-none drop-shadow-lg"
                                     transform={displayPlayers.length === 1 ? undefined : `rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY})`}
                                 >
-                                    {player.name?.slice(0, 10) || "Player"}
+                                    {player.name
+                                        ? player.name.length > 10
+                                            ? player.name.slice(0, 10) + "..."
+                                            : player.name
+                                        : "Player"}
                                 </text>
                             </g>
                         );

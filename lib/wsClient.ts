@@ -1,9 +1,9 @@
 import { Client, Room } from "colyseus.js";
-import { SocketEnum } from "./socket.enum";
+import { config, SocketEnum } from "./socket.enum";
 import { IHostPayload } from "@/components/colyseus/interface/host.interface";
 
 async function resolveEndpoint(): Promise<string> {
-  const rawEnv = await "ws://localhost:2567".trim();
+  const rawEnv = await config.DOMAIN_WS.trim();
 
   if (rawEnv.length > 0) {
     try {
@@ -26,7 +26,7 @@ async function resolveEndpoint(): Promise<string> {
   }
 
   // SSR / tests
-  return "ws://localhost:2567";
+  return config.DOMAIN_WS;
 }
 
 export async function showConnectionStatus(
@@ -34,19 +34,23 @@ export async function showConnectionStatus(
   host: string | undefined
 ) {
   const endpoint = await resolveEndpoint();
-  console.log("🚀 ~ showConnectionStatus ~ endpoint:", endpoint);
+  // console.log("🚀 ~ showConnectionStatus ~ endpoint:", endpoint);
 
   try {
     const client = new Client(endpoint);
     let room: Room | undefined;
     if (host) {
-      room = await client.joinById(host);
+      room = await client.joinById(host, {
+        code: roomId,
+      });
       console.log("🚀 ~ showConnectionStatus ~ joinById: " + host);
     } else {
-      room = await client.joinOrCreate("my_room");
+      room = await client.joinOrCreate("tot", {
+        code: roomId,
+      });
       room.send(SocketEnum.SET_ROOM_HOST, {
         roomId: room.roomId,
-        url: "localhost:3000/new/" + roomId + "/" + room.roomId,
+        url: config.DOMAIN + "new/" + roomId + "/" + room.roomId,
       });
     }
 

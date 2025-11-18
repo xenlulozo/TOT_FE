@@ -508,7 +508,7 @@ const HostPixiView = ({
                     >
                         <motion.div
                             className="text-6xl mb-4"
-                            animate={{ scale: [1, 1.2, 1], rotate: [0, 8, -8, 0] }}
+                            animate={{ scale: [1, 1.2], rotate: [0, 8] }}
                             transition={{ repeat: Infinity, duration: 1.2 }}
                         >
                             🎉

@@ -475,7 +475,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
             className="text-center mb-12"
           >
             {/* <motion.div
-              animate={{ rotate: [0, -5, 5, 0] }}
+              animate={{ rotate: [0, -5] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="inline-block mb-4"
             >
@@ -656,7 +656,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                         className="text-8xl mb-6"
                       >
                         <motion.span
-                          animate={{ rotate: [0, 360] }}
+                          animate={{ rotate: [0, 180] }}
                           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                         >
                           ❓
@@ -746,7 +746,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                       </div>
 
                       <motion.div
-                        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                        animate={{ scale: [1, 1.2], rotate: [0, 10] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                         className="text-8xl mb-6 z-10"
                       >
@@ -909,7 +909,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                         className="text-8xl mb-6"
                       >
                         <motion.span
-                          animate={{ rotate: [0, -360] }}
+                          animate={{ rotate: [0, -180] }}
                           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
                         >
                           🎭
@@ -999,7 +999,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                       </div>
 
                       <motion.div
-                        animate={{ scale: [1, 1.2, 1], rotate: [0, -10, 10, 0] }}
+                        animate={{ scale: [1, 1.2], rotate: [0, -10] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                         className="text-8xl mb-6 z-10"
                       >
@@ -1207,7 +1207,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                       className="text-7xl mb-6"
                     >
                       <motion.span
-                        animate={{ scale: [1, 1.1, 1] }}
+                        animate={{ scale: [1, 1.1] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                       >
                         {selectedPrompt === "truth" ? "❓" : "🎭"}
@@ -1333,7 +1333,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
             >
               <motion.span
                 className="text-4xl"
-                animate={{ rotate: [0, 10, -10, 0] }}
+                animate={{ rotate: [0, 10] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               >
                 {selectedPrompt === "truth" ? "❓" : "🎭"}
@@ -1348,7 +1348,7 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
               </div>
               <motion.span
                 className="text-3xl"
-                animate={{ scale: [1, 1.2, 1] }}
+                animate={{ scale: [1, 1.2] }}
                 transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
               >
                 ✨

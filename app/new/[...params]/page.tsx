@@ -46,6 +46,7 @@ const PixiRoomPage = () => {
     const [spinningPlayerId, setSpinningPlayerId] = useState<string | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<IPlayerSelectedPayload | null>(null);
     const [showPromptSelection, setShowPromptSelection] = useState<boolean>(false);
+    const [showSelectedPlayerPopup, setShowSelectedPlayerPopup] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<"truth" | "trick" | null>(null);
     const [promptContent, setPromptContent] = useState<string | null>(null);
     const [showTurnCountdown, setShowTurnCountdown] = useState<boolean>(false);
@@ -53,6 +54,13 @@ const PixiRoomPage = () => {
 
     // Ref to store room for cleanup
     const roomRef = useRef<Room | null>(null);
+
+    // Debug selectedPlayer changes
+    // useEffect(() => {
+    //     console.log("🎯 selectedPlayer STATE CHANGED:", selectedPlayer);
+    //     console.log("🎯 selectedPlayer.player:", selectedPlayer?.player);
+    //     console.log("🎯 selectedPlayer.player.id:", selectedPlayer?.player?.id);
+    // }, [selectedPlayer]);
 
     // Calculate `me` from roomState and determine if user is host
     const me = useMemo<IPlayerInfo>(() => {
@@ -206,13 +214,23 @@ const PixiRoomPage = () => {
                 });
 
                 // Handle PLAYER_SELECTED event - provides player data for prompt selection
-                connectedRoom.onMessage(SocketEnum.PLAYER_SELECTED, (message: IPlayerSelectedPayload | unknown) => {
-                    console.log("🚀 ~ PLAYER_SELECTED received:", message);
+                connectedRoom.onMessage(SocketEnum.PLAYER_SELECTED, (message: IPlayerSelectedPayload ) => {
+                    console.log("🚀 ~ PLAYER_SELECTED received:", message ,typeof message);
 
                     if (typeof message === 'object' && message !== null) {
                         const payload = message as IPlayerSelectedPayload;
-                        setSelectedPlayer(payload); // Store player data for later use
-                        console.log("🚀 ~ Player selected:", payload.player.name);
+                        // console.log("🚀 ~ PLAYER_SELECTED ~ payload received:", payload);
+                        // console.log("🚀 ~ PLAYER_SELECTED ~ payload.player:", payload.player);
+                        console.log("🚀 ~ PLAYER_SELECTED ~ setting selectedPlayer...");
+
+                        setSelectedPlayer(payload); // Store player data
+                        setShowSelectedPlayerPopup(true); // Show the popup
+
+                        // Log after state update (useEffect will handle this)
+                        // setTimeout(() => {
+                        //     console.log("🚀 ~ PLAYER_SELECTED ~ selectedPlayer state should be updated now");
+                        //     console.log("🚀 ~ initializeRoom ~ setSelectedPlayer:", selectedPlayer)
+                        // }, 100);
                     }
                 });
 
@@ -257,14 +275,27 @@ const PixiRoomPage = () => {
                 // Handle END_TURN event - reset states for next turn
                 connectedRoom.onMessage(SocketEnum.END_TURN, (message: unknown) => {
                     console.log("🚀 ~ END_TURN received:", message);
+                    console.log("🚀 ~ END_TURN - selectedPlayer before reset:", selectedPlayer);
                     console.log("🚀 ~ Before END_TURN - showPromptSelection:", showPromptSelection);
 
                     // Reset all states and close popup when END_TURN is received from server
                     setSelectedPrompt(null);
                     setPromptContent(null); // Clear prompt content
                     setSelectedPlayer(null); // Clear selected player
+                    setShowSelectedPlayerPopup(false); // Hide selected player popup
                     setShowPromptSelection(false); // Close the prompt selection popup
                     console.log("🚀 ~ END_TURN received from server - popup closed and states reset");
+                });
+
+                // Handle HIDE_PLAYER_SELECTED_POPUP event - hide selected player popup
+                connectedRoom.onMessage(SocketEnum.HIDE_PLAYER_SELECTED_POPUP, (message: unknown) => {
+                    console.log("🚀 ~ HIDE_PLAYER_SELECTED_POPUP received:", message);
+                    console.log("🚀 ~ Hiding selected player popup");
+
+                    // Hide selected player popup without affecting selectedPlayer state
+                    setShowSelectedPlayerPopup(false);
+
+                    console.log("🚀 ~ Selected player popup hidden");
                 });
 
                 // Handle END_GAME event - signal game has ended
@@ -349,6 +380,7 @@ const PixiRoomPage = () => {
             room.send(SocketEnum.START_GAME);
             console.log("🚀 ~ handleRestartGame ~ RESTART_GAME sent");
             setGameStarted(false);
+            setGameEnded(false); // Reset game ended state
             setTurnFinished(false);
             setSelected(null);
             setPromptChoice(null);
@@ -472,13 +504,17 @@ const PixiRoomPage = () => {
                 onRestartGame={handleRestartGame}
                 onFinishTurn={handleFinishTurn}
                 onSpinComplete={handleSpinComplete}
-                onSelectedPlayerClose={() => setSelectedPlayer(null)}
+                onSelectedPlayerClose={() => {
+                    console.log("🎯 HOST onSelectedPlayerClose triggered - setting selectedPlayer to null");
+                    setSelectedPlayer(null);
+                }}
                 showPromptSelection={showPromptSelection}
                 selectedPrompt={selectedPrompt}
                 promptContent={promptContent}
                 showTurnCountdown={showTurnCountdown}
                 onTurnCountdownComplete={handleTurnCountdownComplete}
                 onPromptSelected={handlePromptSelected}
+                gameEnded={gameEnded}
             />
         );
     } else {
@@ -490,12 +526,16 @@ const PixiRoomPage = () => {
                 gameStarted={gameStarted}
                 gameEnded={gameEnded}
                 selectedPlayer={selectedPlayer}
+                showSelectedPlayerPopup={showSelectedPlayerPopup}
                 showPromptSelection={showPromptSelection}
                 promptContent={promptContent}
                 onUpdateProfile={handleUpdateProfile}
                 onStartGame={handleStartGame}
                 onRestartGame={handleClientRestartGame}
-                onSelectedPlayerClose={() => setSelectedPlayer(null)}
+                onSelectedPlayerClose={() => {
+                    console.log("🎯 CLIENT onSelectedPlayerClose triggered - hiding selected player popup");
+                    setShowSelectedPlayerPopup(false);
+                }}
                 onPromptSelected={handlePromptSelected}
                 onEndTurn={handleEndTurn}
             />

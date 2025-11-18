@@ -10,13 +10,12 @@ export type CountdownPopupProps = {
     startNumber?: number; // Starting countdown number (default: 3)
 };
 
-const CountdownPopup = ({
+export const CountdownPopup = ({
     show,
     onComplete,
     duration = 3,
     startNumber = 3
 }: CountdownPopupProps) => {
-    console.log("🚀 ~ CountdownPopup ~ show:", show)
     const [countdown, setCountdown] = useState(startNumber);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -66,14 +65,14 @@ const CountdownPopup = ({
                         className="text-center"
                     >
                         <motion.div
-                            animate={{
-                                scale: [1, 1.1, 1],
-                            }}
-                            transition={{
-                                duration: 0.3,
-                                repeat: Infinity,
-                                repeatType: "reverse",
-                            }}
+                            // animate={{
+                            //     scale: [1,  1.1] ,
+                            // }}
+                            // transition={{
+                            //     duration: 0.5,
+                            //     repeat: Infinity,
+                            //     repeatType: "reverse",
+                            // }}
                             className="text-9xl md:text-[12rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"
                         >
                             {countdown}

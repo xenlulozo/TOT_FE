@@ -62,9 +62,13 @@ type SelectedPlayerPopupProps = {
 
 
 const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupProps) => {
+    console.log("🚀 ~ SelectedPlayerPopup ~ selectedPlayer:", selectedPlayer)
     // Pre-calculate particle properties to avoid Math.random in render
     const particles = useMemo(() => generateParticles(), []);
 
+    // Disabled auto-close for selected player popup
+    // It should stay open until player selects prompt or turn ends
+    /*
     useEffect(() => {
         if (selectedPlayer) {
             // Auto close after TIME_CLOSE_POPUP_SELECTED_PLAYER
@@ -75,6 +79,7 @@ const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupPro
             return () => clearTimeout(timer);
         }
     }, [selectedPlayer, onClose]);
+    */
 
     if (!selectedPlayer) {
         return null;
@@ -128,12 +133,12 @@ const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupPro
                     <div className="absolute inset-0 flex items-center justify-center">
                         <motion.div
                             className="w-32 h-32 border-4 border-white rounded-full opacity-30"
-                            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
+                            animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
                             transition={{ duration: 2, repeat: Infinity }}
                         />
                         <motion.div
                             className="absolute w-40 h-40 border-2 border-white rounded-full opacity-20"
-                            animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0, 0.2] }}
+                            animate={{ scale: [1, 1.3], opacity: [0.2, 0] }}
                             transition={{ duration: 2, delay: 0.5, repeat: Infinity }}
                         />
                     </div>

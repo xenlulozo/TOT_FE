@@ -50,6 +50,7 @@ export type ClientViewProps = {
     gameStarted: boolean;
     gameEnded?: boolean;
     selectedPlayer?: IPlayerSelectedPayload | null;
+    showSelectedPlayerPopup?: boolean;
     showPromptSelection?: boolean;
     promptContent?: string | null;
     onUpdateProfile: (profile: { name: string; avatar: string }) => void;
@@ -133,7 +134,7 @@ const PixiWelcomeCard = ({ width, height }: { width: number; height: number }) =
     );
 };
 
-const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPlayer, showPromptSelection, promptContent, onUpdateProfile, onStartGame, onRestartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
+const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPlayer, showSelectedPlayerPopup, showPromptSelection, promptContent, onUpdateProfile, onStartGame, onRestartGame, onSelectedPlayerClose, onPromptSelected, onEndTurn }: ClientViewProps) => {
     // Local state to control popup visibility
     const [localShowPromptSelection, setLocalShowPromptSelection] = useState(showPromptSelection);
 
@@ -275,7 +276,7 @@ const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPla
                 </div>
 
                 {/* Pixi Canvas Welcome Card */}
-                <div className="w-full rounded-3xl border border-white/20 bg-black/30 shadow-2xl overflow-hidden backdrop-blur-sm">
+                {/* <div className="w-full rounded-3xl border border-white/20 bg-black/30 shadow-2xl overflow-hidden backdrop-blur-sm">
                     <div ref={canvasRef} style={{ height: stageSize.height }}>
                         <Application
                             width={stageSize.width}
@@ -286,7 +287,7 @@ const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPla
                             <PixiWelcomeCard width={stageSize.width} height={stageSize.height} />
                         </Application>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Start Game Button - Show when not started */}
                 {!gameStarted && (
@@ -489,18 +490,24 @@ const ClientColyseusView = ({ roomState, me, gameStarted, gameEnded, selectedPla
                     </div>
                 )}
 
-                {/* Selected Player Popup - chỉ hiển thị khi người này là người được chọn */}
-                {selectedPlayer && selectedPlayer.player.id === me.id && (
+                {/* Selected Player Popup - chỉ hiển thị khi người này là người được chọn và được phép hiển thị */}
+                {selectedPlayer && selectedPlayer.player.id === me.id && showSelectedPlayerPopup && (
                     <SelectedPlayerPopup
                         selectedPlayer={selectedPlayer}
-                        onClose={onSelectedPlayerClose}
+                        onClose={() => {
+                            console.log("🎯 SelectedPlayerPopup onClose triggered");
+                            // Call parent's onSelectedPlayerClose to update showSelectedPlayerPopup state
+                            onSelectedPlayerClose?.();
+                        }}
                     />
                 )}
 
                 {/* Client Prompt Popup - hiển thị khi PICK_PROMPT received */}
-                {localShowPromptSelection && (
+                { selectedPlayer && localShowPromptSelection && (
+                    
                     <ClientPromptPopup
-                        selectedPlayer={selectedPlayer || null} // Có thể null ban đầu, sẽ update khi PLAYER_SELECTED đến
+                        selectedPlayer={selectedPlayer ?? null} // Có thể null ban đầu, sẽ update khi PLAYER_SELECTED đến
+                        currentPlayerId={me.id}
                         promptContent={promptContent}
                         onPromptSelected={handlePromptSelected}
                         onEndTurn={onEndTurn || (() => { })}
