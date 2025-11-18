@@ -37,7 +37,7 @@ const SAMPLE_PLAYERS: IPlayerInfo[] = [
 ];
 
 
-const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = config.SPIN_TIME }: SpinningWheelProps) => {
+export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = config.SPIN_TIME }: SpinningWheelProps) => {
     const [rotation, setRotation] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
 
@@ -141,17 +141,33 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = c
                         const x2 = centerX + radius * Math.cos(endAngle);
                         const y2 = centerY + radius * Math.sin(endAngle);
 
-                        const largeArcFlag = segmentAngle > 180 ? 1 : 0;
+                        let pathData: string;
 
-                        const pathData = [
-                            `M ${centerX} ${centerY}`,
-                            `L ${x1} ${y1}`,
-                            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                            'Z'
-                        ].join(' ');
+                        if (displayPlayers.length === 1) {
+                            // For single player, draw a full circle
+                            pathData = `M ${centerX} ${centerY - radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY + radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY - radius} Z`;
+                        } else {
+                            const largeArcFlag = segmentAngle > 180 ? 1 : 0;
+                            pathData = [
+                                `M ${centerX} ${centerY}`,
+                                `L ${x1} ${y1}`,
+                                `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                'Z'
+                            ].join(' ');
+                        }
 
-                        const midAngle = (startAngle + endAngle) / 2;
-                        const textRadius = (radius + innerRadius) / 2; // Position text in middle of segment
+                        let midAngle: number;
+                        let textRadius: number;
+
+                        if (displayPlayers.length === 1) {
+                            // For single player, place text at top (towards the arrow)
+                            midAngle = -Math.PI / 2; // -90 degrees (top)
+                            textRadius = (radius + innerRadius) / 2;
+                        } else {
+                            midAngle = (startAngle + endAngle) / 2;
+                            textRadius = (radius + innerRadius) / 2;
+                        }
+
                         const textX = centerX + textRadius * Math.cos(midAngle);
                         const textY = centerY + textRadius * Math.sin(midAngle);
 
@@ -176,7 +192,7 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = c
                                     fontWeight="700"
                                     fill="#ffffff"
                                     className="pointer-events-none select-none drop-shadow-lg"
-                                    transform={`rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY})`}
+                                    transform={displayPlayers.length === 1 ? undefined : `rotate(${(midAngle * 180) / Math.PI}, ${textX}, ${textY})`}
                                 >
                                     {player.name?.slice(0, 10) || "Player"}
                                 </text>
@@ -187,7 +203,7 @@ const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = c
 
                 {/* Mũi tên chỉ vào bánh xe từ phía trên */}
                 <div className="absolute top-5 left-1/2 -translate-x-1/2 translate-y-2 z-30">
-                    <svg width="50" height="35" viewBox="0 0 30 25"         className="rotate-180"
+                    <svg width="50" height="35" viewBox="0 0 30 25" className="rotate-180"
                     >
                         <path
                             d="M 15 0 L 0 25 L 30 25 Z"

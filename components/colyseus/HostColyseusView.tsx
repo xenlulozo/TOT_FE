@@ -133,12 +133,18 @@ const HostColyseusView = ({
     // State để quản lý popup chúc mừng sau khi bánh xe quay xong
     const [showCelebrationPopup, setShowCelebrationPopup] = useState(false);
     const [showCountdown, setShowCountdown] = useState(false);
+    const [showGameStartCountdown, setShowGameStartCountdown] = useState(false);
     const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Handle countdown completion
     const handleCountdownComplete = () => {
         setShowCountdown(false);
         onTurnCountdownComplete?.();
+    };
+
+    // Handle game start countdown completion
+    const handleGameStartCountdownComplete = () => {
+        setShowGameStartCountdown(false);
     };
 
     // Trigger countdown when showTurnCountdown prop changes
@@ -148,6 +154,14 @@ const HostColyseusView = ({
             setShowCountdown(true);
         }
     }, [showTurnCountdown]);
+
+    // Trigger game start countdown when game starts
+    useEffect(() => {
+        if (gameStarted) {
+            console.log("🎯 HostColyseusView: Starting game start countdown");
+            setShowGameStartCountdown(true);
+        }
+    }, [gameStarted]);
 
     const hidePopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasShownPopupRef = useRef<string | null>(null); // Track player đã hiện popup
@@ -390,7 +404,7 @@ const HostColyseusView = ({
     // Bánh xe luôn hiển thị ngay từ khi game bắt đầu
     if (gameStarted) {
         return (
-            <>
+            <div className="h-screen overflow-hidden flex flex-col">
                 <div className="flex-1 flex gap-6">
                     {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
                     <div className="flex-1 flex flex-col gap-6">
@@ -488,7 +502,7 @@ const HostColyseusView = ({
                 {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
 
                 {/* Selected Player Popup - Hide during countdown */}
-                {!showCountdown && (
+                {!showCountdown && !showGameStartCountdown && (
                     <SelectedPlayerPopup
                         selectedPlayer={selectedPlayer ?? null}
                         onClose={onSelectedPlayerClose}
@@ -496,15 +510,34 @@ const HostColyseusView = ({
                 )}
 
                 {/* Prompt Selection - Hide during countdown */}
-                {showPromptSelection && !showCountdown && (
-                    <PromptSelection
-                        selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
-                        selectedPrompt={selectedPrompt ?? null} // Which prompt was selected (from server events)
-                        promptContent={promptContent} // Content of the selected prompt
-                        onPromptSelected={onPromptSelected || (() => { })}
-                    />
-                )}
-            </>
+                <AnimatePresence>
+                    {showPromptSelection && !showCountdown && !showGameStartCountdown && (
+                        <PromptSelection
+                            selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
+                            selectedPrompt={selectedPrompt ?? null} // Which prompt was selected (from server events)
+                            promptContent={promptContent} // Content of the selected prompt
+                            onPromptSelected={onPromptSelected || (() => { })}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Game Start Countdown - Full screen overlay */}
+                <CountdownPopup
+                    show={showGameStartCountdown}
+                    onComplete={handleGameStartCountdownComplete}
+                    duration={3}
+                    startNumber={3}
+                />
+
+                {/* Turn Countdown - Full screen overlay */}
+                <CountdownPopup
+                    show={showCountdown}
+                    onComplete={handleCountdownComplete}
+                    duration={3}
+                    startNumber={3}
+                />
+            </div>
+
         );
     }
 

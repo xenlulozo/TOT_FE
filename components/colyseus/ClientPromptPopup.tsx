@@ -46,6 +46,7 @@ const ClientPromptPopup = ({ selectedPlayer, promptContent, onPromptSelected, on
   useEffect(() => {
     if (selectedPrompt && promptContent) {
       console.log("📝 ClientPromptPopup: Received prompt content from server:", promptContent);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuestion(promptContent);
       setShowQuestion(true);
     }
@@ -138,8 +139,8 @@ const ClientPromptPopup = ({ selectedPlayer, promptContent, onPromptSelected, on
                 className="w-48 h-48 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 flex flex-col items-center justify-center text-white shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handlePromptClick("truth")}
                 // disabled={!!selectedPrompt || !selectedPlayer}
-                whileHover={ { scale: 1.05 }}
-                whileTap={ { scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 suppressHydrationWarning={true}
               >
                 <div className="text-5xl mb-3">❓</div>
@@ -155,8 +156,8 @@ const ClientPromptPopup = ({ selectedPlayer, promptContent, onPromptSelected, on
                 className="w-48 h-48 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-800 flex flex-col items-center justify-center text-white shadow-2xl hover:shadow-red-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handlePromptClick("trick")}
                 // disabled={!!selectedPrompt || !selectedPlayer}
-                whileHover={ { scale: 1.05 }}
-                whileTap={ { scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 suppressHydrationWarning={true}
               >
                 <div className="text-5xl mb-3">🎭</div>

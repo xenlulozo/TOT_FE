@@ -16,6 +16,7 @@ const CountdownPopup = ({
     duration = 3,
     startNumber = 3
 }: CountdownPopupProps) => {
+    console.log("🚀 ~ CountdownPopup ~ show:", show)
     const [countdown, setCountdown] = useState(startNumber);
     const [isVisible, setIsVisible] = useState(false);
 

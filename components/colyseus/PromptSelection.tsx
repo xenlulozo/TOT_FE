@@ -1,6 +1,6 @@
 "use client";
 
-import React, {  useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Application, extend } from "@pixi/react";
 import { Container, Graphics, Text } from "pixi.js";
@@ -16,6 +16,7 @@ extend({
 // Suppress hydration warnings for framer-motion animations
 const MotionDiv = motion.div;
 const MotionAnimatePresence = AnimatePresence;
+
 import { IPlayerSelectedPayload } from "./interface/game.interface";
 // import PixiCard from "./PixiCard";
 
@@ -62,9 +63,8 @@ const OptimizedCard = ({
   return (
     <div
       ref={cardRef}
-      className={`w-64 h-80 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ease-out ${
-        isInteractive ? 'hover:scale-105' : ''
-      }`}
+      className={`w-64 h-80 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ease-out ${isInteractive ? 'hover:scale-105' : ''
+        }`}
       style={{
         transformStyle: 'preserve-3d',
         backfaceVisibility: 'hidden'
@@ -73,9 +73,8 @@ const OptimizedCard = ({
     >
       {/* Card Back */}
       <div
-        className={`absolute inset-0 w-full h-full ${bgGradient} flex flex-col items-center justify-center p-6 ${
-          isSelected ? 'opacity-0' : 'opacity-100'
-        } transition-opacity duration-300`}
+        className={`absolute inset-0 w-full h-full ${bgGradient} flex flex-col items-center justify-center p-6 ${isSelected ? 'opacity-0' : 'opacity-100'
+          } transition-opacity duration-300`}
         style={{ backfaceVisibility: 'hidden' }}
       >
         <div className="text-6xl mb-4">{type === 'truth' ? '❓' : '🎭'}</div>
@@ -92,9 +91,8 @@ const OptimizedCard = ({
 
       {/* Card Front - Content */}
       <div
-        className={`absolute inset-0 w-full h-full ${frontBgGradient} flex flex-col items-center justify-center p-6 ${
-          isSelected ? 'opacity-100' : 'opacity-0'
-        } transition-opacity duration-300`}
+        className={`absolute inset-0 w-full h-full ${frontBgGradient} flex flex-col items-center justify-center p-6 ${isSelected ? 'opacity-100' : 'opacity-0'
+          } transition-opacity duration-300`}
         style={{
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)'
@@ -373,11 +371,29 @@ const generateParticles = (count: number) => {
   }));
 };
 
+// Generate selected card particles - called outside component to avoid render issues
+const generateSelectedParticles = () => {
+  return Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 300 - 150,
+    y: Math.random() * 400 - 200,
+    yStart: Math.random() * 400 - 200,
+    yMid: Math.random() * 400 - 200 - 50,
+    yEnd: Math.random() * 400 - 200,
+    duration: 4 + Math.random() * 2,
+    delay: Math.random() * 2,
+  }));
+};
+
+// Pre-calculate selected particles outside component
+const SELECTED_PARTICLES = generateSelectedParticles();
+
 export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent, onPromptSelected }: PromptSelectionProps) => {
   // selectedPlayer data comes from PLAYER_SELECTED event
   // PICK_PROMPT event just signals to show this UI
   // selectedPrompt comes from server events (TRUTH_PROMPT_SELECTED/TRICK_PROMPT_SELECTED)
   // Component closes when END_TURN event is received from server
+
 
   // Pre-calculate particles to avoid Math.random() in render
   const truthParticles = useMemo(() => generateParticles(12), []);
@@ -473,434 +489,532 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
             </p> */}
           </motion.div>
 
-        {/* Cards Container */}
-        {!selectedPrompt ? (
-          /* Selection Phase - Show both cards */
-          <motion.div
-            key="selection-phase"
-            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{
-              opacity: 0,
-              scale: 0.9,
-              y: 30,
-              transition: { duration: 0.4, ease: "easeInOut" }
-            }}
-            transition={{
-              duration: 0.6,
-              ease: "easeOut",
-              staggerChildren: 0.15,
-              delayChildren: 0.3
-            }}
-            className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12"
-          >
-            {/* Truth Card */}
+          {/* Cards Container */}
+          {!selectedPrompt ? (
+            /* Selection Phase - Show both cards */
             <motion.div
-              initial={{
-                x: -120,
+              key="selection-phase"
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{
                 opacity: 0,
-                rotateY: -20,
-                scale: 0.8,
-                filter: "blur(4px)"
-              }}
-              animate={{
-                x: 0,
-                opacity: 1,
-                rotateY: 0,
-                scale: 1,
-                filter: "blur(0px)"
+                scale: 0.9,
+                y: 30,
+                transition: { duration: 0.4, ease: "easeInOut" }
               }}
               transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-                opacity: { duration: 0.5 },
-                scale: { duration: 0.6, ease: "easeOut" }
+                duration: 0.6,
+                ease: "easeOut",
+                staggerChildren: 0.15,
+                delayChildren: 0.3
               }}
-              className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
-              onClick={() => handlePromptClick("truth")}
-              whileHover={onPromptSelected && !selectedPrompt ? {
-                scale: 1.08,
-                rotateY: 5,
-                rotateX: 5,
-                z: 50,
-                transition: { duration: 0.2 }
-              } : {}}
-              whileTap={onPromptSelected && !selectedPrompt ? {
-                scale: 0.95,
-                transition: { duration: 0.1 }
-              } : {}}
-              suppressHydrationWarning={true}
+              className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12"
             >
-              {/* Glow Effect */}
+              {/* Truth Card */}
               <motion.div
-                className={`absolute inset-0 rounded-3xl opacity-0 ${onPromptSelected ? 'group-hover:opacity-100' : ''} transition-opacity duration-300`}
-                style={{
-                  background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)',
-                  filter: 'blur(20px)',
+                initial={{
+                  x: -120,
+                  opacity: 0,
+                  rotateY: -20,
+                  scale: 0.8,
+                  filter: "blur(4px)"
                 }}
-                animate={selectedPrompt === "truth" ? {
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.6, 0.3]
-                } : {}}
-                transition={{ duration: 2, repeat: selectedPrompt === "truth" ? Infinity : 0 }}
-              />
-
-              {/* Floating Particles */}
-              {selectedPrompt !== "truth" && (
-                <motion.div className="absolute -top-4 -right-4 w-3 h-3 bg-blue-400 rounded-full opacity-60" />
-              )}
-              {selectedPrompt !== "truth" && (
-                <motion.div className="absolute -bottom-4 -left-4 w-2 h-2 bg-cyan-400 rounded-full opacity-40" />
-              )}
-
-              <motion.div
-                className="w-64 sm:w-72 h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl relative"
                 animate={{
-                  rotateY: selectedPrompt === "truth" ? 180 : 0,
-                  scale: selectedPrompt === "truth" ? 1.1 : 1,
-                  y: selectedPrompt !== "truth" ? [0, -5, 0] : 0,
+                  x: 0,
+                  opacity: 1,
+                  rotateY: 0,
+                  scale: 1,
+                  filter: "blur(0px)"
                 }}
                 transition={{
-                  duration: 0.6,
-                  y: { duration: 3, repeat: selectedPrompt !== "truth" ? Infinity : 0, ease: "easeInOut" }
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 25,
+                  opacity: { duration: 0.5 },
+                  scale: { duration: 0.6, ease: "easeOut" }
                 }}
-                style={{ transformStyle: "preserve-3d" }}
+                className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
+                onClick={() => handlePromptClick("truth")}
+                whileHover={onPromptSelected && !selectedPrompt ? {
+                  scale: 1.08,
+                  rotateY: 5,
+                  rotateX: 5,
+                  z: 50,
+                  transition: { duration: 0.2 }
+                } : {}}
+                whileTap={onPromptSelected && !selectedPrompt ? {
+                  scale: 0.95,
+                  transition: { duration: 0.1 }
+                } : {}}
+                suppressHydrationWarning={true}
               >
-                {/* Card Back */}
+                {/* Glow Effect */}
                 <motion.div
-                  className="absolute inset-0 w-full h-full backface-hidden"
-                  style={{ backfaceVisibility: "hidden" }}
+                  className={`absolute inset-0 rounded-3xl opacity-0 ${onPromptSelected ? 'group-hover:opacity-100' : ''} transition-opacity duration-300`}
+                  style={{
+                    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)',
+                    filter: 'blur(20px)',
+                  }}
+                  animate={selectedPrompt === "truth" ? {
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 0.6, 0.3]
+                  } : {}}
+                  transition={{ duration: 2, repeat: selectedPrompt === "truth" ? Infinity : 0 }}
+                />
+
+                {/* Floating Particles */}
+                {selectedPrompt !== "truth" && (
+                  <motion.div className="absolute -top-4 -right-4 w-3 h-3 bg-blue-400 rounded-full opacity-60" />
+                )}
+                {selectedPrompt !== "truth" && (
+                  <motion.div className="absolute -bottom-4 -left-4 w-2 h-2 bg-cyan-400 rounded-full opacity-40" />
+                )}
+
+                <motion.div
+                  className="w-64 sm:w-72 h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl relative"
+                  animate={{
+                    rotateY: selectedPrompt === "truth" ? 180 : 0,
+                    scale: selectedPrompt === "truth" ? 1.1 : 1,
+                    y: selectedPrompt !== "truth" ? [0, -8, -6, -10, -4, -8, 0] : 0,
+                    rotateX: selectedPrompt !== "truth" ? [0, -0.5, 0.3, -0.8, 0.2, -0.5, 0] : 0,
+                    boxShadow: selectedPrompt !== "truth"
+                      ? [
+                        "0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1)",
+                        "0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)",
+                        "0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1)"
+                      ]
+                      : "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                  }}
+                  transition={{
+                    duration: 0.6,
+                    y: {
+                      duration: 6,
+                      repeat: selectedPrompt !== "truth" ? Infinity : 0,
+                      ease: "easeInOut"
+                    },
+                    rotateX: {
+                      duration: 6,
+                      repeat: selectedPrompt !== "truth" ? Infinity : 0,
+                      ease: "easeInOut"
+                    },
+                    boxShadow: {
+                      duration: 3,
+                      repeat: selectedPrompt !== "truth" ? Infinity : 0,
+                      ease: "easeInOut"
+                    }
+                  }}
+                  style={{
+                    transformStyle: "preserve-3d",
+                    willChange: "transform"
+                  }}
+                  whileHover={selectedPrompt !== "truth" ? {
+                    scale: 1.05,
+                    transition: { duration: 0.2 }
+                  } : {}}
+                  whileTap={selectedPrompt !== "truth" ? {
+                    scale: 0.98,
+                    transition: { duration: 0.1 }
+                  } : {}}
                 >
+                  {/* Card Back */}
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.4 }}
-                    className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-600 via-blue-700 to-blue-900 flex flex-col items-center justify-center relative overflow-hidden"
+                    className="absolute inset-0 w-full h-full backface-hidden"
+                    style={{ backfaceVisibility: "hidden" }}
                   >
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.0, duration: 0.3 }}
-                        className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full"
-                      />
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.1, duration: 0.3 }}
-                        className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full"
-                      />
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.2, duration: 0.3 }}
-                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
-                      />
-                    </div>
-
                     <motion.div
-                      initial={{ scale: 0.5, opacity: 0, rotate: -180 }}
-                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                      transition={{ delay: 0.9, duration: 0.5, type: "spring", stiffness: 200 }}
-                      className="text-8xl mb-6"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.8, duration: 0.4 }}
+                      className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-600 via-blue-700 to-blue-900 flex flex-col items-center justify-center relative overflow-hidden"
                     >
-                      <motion.span
-                        animate={{ rotate: [0, 360] }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      {/* Background Pattern */}
+                      <div className="absolute inset-0 opacity-10">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.0, duration: 0.3 }}
+                          className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full"
+                        />
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.1, duration: 0.3 }}
+                          className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full"
+                        />
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.2, duration: 0.3 }}
+                          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
+                        />
+                      </div>
+
+                      <motion.div
+                        initial={{ scale: 0.5, opacity: 0, rotate: -180 }}
+                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                        transition={{ delay: 0.9, duration: 0.5, type: "spring", stiffness: 200 }}
+                        className="text-8xl mb-6"
                       >
-                        ❓
-                      </motion.span>
-                    </motion.div>
+                        <motion.span
+                          animate={{ rotate: [0, 360] }}
+                          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        >
+                          ❓
+                        </motion.span>
+                      </motion.div>
 
-                    <motion.h3
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.1, duration: 0.4, ease: "easeOut" }}
-                      className="text-4xl font-black mb-3 text-white drop-shadow-lg"
-                    >
-                      TRUTH
-                    </motion.h3>
+                      <motion.h3
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: [1, 1.05, 1],
+                          textShadow: [
+                            "0 0 10px rgba(255,255,255,0.5)",
+                            "0 0 20px rgba(255,255,255,0.8)",
+                            "0 0 10px rgba(255,255,255,0.5)"
+                          ]
+                        }}
+                        transition={{
+                          delay: 1.1,
+                          duration: 0.4,
+                          ease: "easeOut",
+                          scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                          textShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                        }}
+                        className="text-4xl font-black mb-3 text-white drop-shadow-lg"
+                      >
+                        TRUTH
+                      </motion.h3>
 
-                    <motion.p
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
-                      className="text-blue-100 text-lg font-medium"
-                    >
-                      Câu hỏi thật thà
-                    </motion.p>
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
+                        className="text-blue-100 text-lg font-medium"
+                      >
+                        Câu hỏi thật thà
+                      </motion.p>
 
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
-                      className="mt-6 text-2xl"
-                    >
-                      🤔💭
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+                        className="mt-6 text-2xl"
+                      >
+                        🤔💭
+                      </motion.div>
                     </motion.div>
                   </motion.div>
-                </motion.div>
 
-                {/* Card Front - Selected State */}
-                <motion.div
-                  className="absolute inset-0 w-full h-full backface-hidden"
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateY(180deg)"
-                  }}
-                >
-                  <div className="w-full h-full bg-gradient-to-br from-emerald-400 via-emerald-600 to-emerald-800 flex flex-col items-center justify-center relative overflow-hidden">
-                    {/* Success Particles Background */}
-                    <div className="absolute inset-0">
-                      {truthParticles.map((particle) => (
-                        <motion.div
-                          key={particle.id}
-                          className="absolute w-2 h-2 bg-white rounded-full"
-                          initial={{
-                            x: particle.x,
-                            y: particle.y,
-                            opacity: 0,
-                            scale: 0
-                          }}
-                          animate={{
-                            opacity: [0, 1, 0],
-                            scale: [0, 1, 0],
-                            x: particle.x,
-                            y: particle.y,
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            delay: particle.delay,
-                            ease: "easeOut"
-                          }}
-                        />
-                      ))}
+                  {/* Card Front - Selected State */}
+                  <motion.div
+                    className="absolute inset-0 w-full h-full backface-hidden"
+                    style={{
+                      backfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)"
+                    }}
+                  >
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-400 via-emerald-600 to-emerald-800 flex flex-col items-center justify-center relative overflow-hidden">
+                      {/* Success Particles Background */}
+                      <div className="absolute inset-0">
+                        {truthParticles.map((particle) => (
+                          <motion.div
+                            key={particle.id}
+                            className="absolute w-2 h-2 bg-white rounded-full"
+                            initial={{
+                              x: particle.x,
+                              y: particle.y,
+                              opacity: 0,
+                              scale: 0
+                            }}
+                            animate={{
+                              opacity: [0, 1, 0],
+                              scale: [0, 1, 0],
+                              x: particle.x,
+                              y: [particle.y, particle.y - 20, particle.y],
+                              rotate: [0, 180, 360]
+                            }}
+                            transition={{
+                              duration: 3,
+                              repeat: Infinity,
+                              delay: particle.delay,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-8xl mb-6 z-10"
+                      >
+                        ✅
+                      </motion.div>
+                      <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg z-10">
+                        TRUTH
+                      </h3>
+                      <p className="text-emerald-100 text-xl font-bold z-10">
+                        Đã chọn! 🎉
+                      </p>
                     </div>
-
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      className="text-8xl mb-6 z-10"
-                    >
-                      ✅
-                    </motion.div>
-                    <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg z-10">
-                      TRUTH
-                    </h3>
-                    <p className="text-emerald-100 text-xl font-bold z-10">
-                      Đã chọn! 🎉
-                    </p>
-                  </div>
+                  </motion.div>
                 </motion.div>
               </motion.div>
-            </motion.div>
 
-            {/* Trick Card */}
-            <motion.div
-              initial={{
-                x: 120,
-                opacity: 0,
-                rotateY: 20,
-                scale: 0.8,
-                filter: "blur(4px)"
-              }}
-              animate={{
-                x: 0,
-                opacity: 1,
-                rotateY: 0,
-                scale: 1,
-                filter: "blur(0px)"
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-                opacity: { duration: 0.5 },
-                scale: { duration: 0.6, ease: "easeOut" }
-              }}
-              className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
-              onClick={() => handlePromptClick("trick")}
-              whileHover={onPromptSelected && !selectedPrompt ? {
-                scale: 1.08,
-                rotateY: -5,
-                rotateX: -5,
-                z: 50,
-                transition: { duration: 0.2 }
-              } : {}}
-              whileTap={onPromptSelected && !selectedPrompt ? {
-                scale: 0.95,
-                transition: { duration: 0.1 }
-              } : {}}
-              suppressHydrationWarning={true}
-            >
-              {/* Glow Effect */}
+              {/* Trick Card */}
               <motion.div
-                className={`absolute inset-0 rounded-3xl opacity-0 ${onPromptSelected ? 'group-hover:opacity-100' : ''} transition-opacity duration-300`}
-                style={{
-                  background: 'radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%)',
-                  filter: 'blur(20px)',
+                initial={{
+                  x: 120,
+                  opacity: 0,
+                  rotateY: 20,
+                  scale: 0.8,
+                  filter: "blur(4px)"
                 }}
-                animate={selectedPrompt === "trick" ? {
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.6, 0.3]
-                } : {}}
-                transition={{ duration: 2, repeat: selectedPrompt === "trick" ? Infinity : 0 }}
-              />
-
-              {/* Floating Particles */}
-              {selectedPrompt !== "trick" && (
-                <motion.div className="absolute -top-4 -left-4 w-3 h-3 bg-red-400 rounded-full opacity-60" />
-              )}
-              {selectedPrompt !== "trick" && (
-                <motion.div className="absolute -bottom-4 -right-4 w-2 h-2 bg-pink-400 rounded-full opacity-40" />
-              )}
-
-              <motion.div
-                className="w-64 sm:w-72 h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl relative"
                 animate={{
-                  rotateY: selectedPrompt === "trick" ? 180 : 0,
-                  scale: selectedPrompt === "trick" ? 1.1 : 1,
-                  y: selectedPrompt !== "trick" ? [0, -5, 0] : 0,
+                  x: 0,
+                  opacity: 1,
+                  rotateY: 0,
+                  scale: 1,
+                  filter: "blur(0px)"
                 }}
                 transition={{
-                  duration: 0.6,
-                  y: { duration: 3.2, repeat: selectedPrompt !== "trick" ? Infinity : 0, ease: "easeInOut" }
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 25,
+                  opacity: { duration: 0.5 },
+                  scale: { duration: 0.6, ease: "easeOut" }
                 }}
-                style={{ transformStyle: "preserve-3d" }}
+                className={`relative ${onPromptSelected ? 'cursor-pointer group' : 'cursor-default'}`}
+                onClick={() => handlePromptClick("trick")}
+                whileHover={onPromptSelected && !selectedPrompt ? {
+                  scale: 1.08,
+                  rotateY: -5,
+                  rotateX: -5,
+                  z: 50,
+                  transition: { duration: 0.2 }
+                } : {}}
+                whileTap={onPromptSelected && !selectedPrompt ? {
+                  scale: 0.95,
+                  transition: { duration: 0.1 }
+                } : {}}
+                suppressHydrationWarning={true}
               >
-                {/* Card Back */}
+                {/* Glow Effect */}
                 <motion.div
-                  className="absolute inset-0 w-full h-full backface-hidden"
-                  style={{ backfaceVisibility: "hidden" }}
+                  className={`absolute inset-0 rounded-3xl opacity-0 ${onPromptSelected ? 'group-hover:opacity-100' : ''} transition-opacity duration-300`}
+                  style={{
+                    background: 'radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%)',
+                    filter: 'blur(20px)',
+                  }}
+                  animate={selectedPrompt === "trick" ? {
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 0.6, 0.3]
+                  } : {}}
+                  transition={{ duration: 2, repeat: selectedPrompt === "trick" ? Infinity : 0 }}
+                />
+
+                {/* Floating Particles */}
+                {selectedPrompt !== "trick" && (
+                  <motion.div className="absolute -top-4 -left-4 w-3 h-3 bg-red-400 rounded-full opacity-60" />
+                )}
+                {selectedPrompt !== "trick" && (
+                  <motion.div className="absolute -bottom-4 -right-4 w-2 h-2 bg-pink-400 rounded-full opacity-40" />
+                )}
+
+                <motion.div
+                  className="w-64 sm:w-72 h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl relative"
+                  animate={{
+                    rotateY: selectedPrompt === "trick" ? 180 : 0,
+                    scale: selectedPrompt === "trick" ? 1.1 : 1,
+                    y: selectedPrompt !== "trick" ? [0, -10, -8, -12, -6, -10, 0] : 0,
+                    rotateX: selectedPrompt !== "trick" ? [0, 0.6, -0.4, 0.9, -0.2, 0.6, 0] : 0,
+                    boxShadow: selectedPrompt !== "trick"
+                      ? [
+                        "0 0 20px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1)",
+                        "0 0 30px rgba(239, 68, 68, 0.4), 0 0 60px rgba(239, 68, 68, 0.2)",
+                        "0 0 20px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1)"
+                      ]
+                      : "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                  }}
+                  transition={{
+                    duration: 0.6,
+                    y: {
+                      duration: 6.5,
+                      repeat: selectedPrompt !== "trick" ? Infinity : 0,
+                      ease: "easeInOut"
+                    },
+                    rotateX: {
+                      duration: 6.5,
+                      repeat: selectedPrompt !== "trick" ? Infinity : 0,
+                      ease: "easeInOut"
+                    },
+                    boxShadow: {
+                      duration: 3.2,
+                      repeat: selectedPrompt !== "trick" ? Infinity : 0,
+                      ease: "easeInOut"
+                    }
+                  }}
+                  style={{
+                    transformStyle: "preserve-3d",
+                    willChange: "transform"
+                  }}
+                  whileHover={selectedPrompt !== "trick" ? {
+                    scale: 1.05,
+                    transition: { duration: 0.2 }
+                  } : {}}
+                  whileTap={selectedPrompt !== "trick" ? {
+                    scale: 0.98,
+                    transition: { duration: 0.1 }
+                  } : {}}
                 >
+                  {/* Card Back */}
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.0, duration: 0.4 }}
-                    className="w-full h-full bg-gradient-to-br from-red-400 via-red-600 via-red-700 to-red-900 flex flex-col items-center justify-center relative overflow-hidden"
+                    className="absolute inset-0 w-full h-full backface-hidden"
+                    style={{ backfaceVisibility: "hidden" }}
                   >
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.2, duration: 0.3 }}
-                        className="absolute top-4 right-4 w-16 h-16 border-2 border-white/20 rounded-full"
-                      />
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.3, duration: 0.3 }}
-                        className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/20 rounded-full"
-                      />
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 1.4, duration: 0.3 }}
-                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
-                      />
-                    </div>
-
                     <motion.div
-                      initial={{ scale: 0.5, opacity: 0, rotate: 180 }}
-                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                      transition={{ delay: 1.1, duration: 0.5, type: "spring", stiffness: 200 }}
-                      className="text-8xl mb-6"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 1.0, duration: 0.4 }}
+                      className="w-full h-full bg-gradient-to-br from-red-400 via-red-600 via-red-700 to-red-900 flex flex-col items-center justify-center relative overflow-hidden"
                     >
-                      <motion.span
-                        animate={{ rotate: [0, -360] }}
-                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                      {/* Background Pattern */}
+                      <div className="absolute inset-0 opacity-10">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.2, duration: 0.3 }}
+                          className="absolute top-4 right-4 w-16 h-16 border-2 border-white/20 rounded-full"
+                        />
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.3, duration: 0.3 }}
+                          className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/20 rounded-full"
+                        />
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 1.4, duration: 0.3 }}
+                          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
+                        />
+                      </div>
+
+                      <motion.div
+                        initial={{ scale: 0.5, opacity: 0, rotate: 180 }}
+                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                        transition={{ delay: 1.1, duration: 0.5, type: "spring", stiffness: 200 }}
+                        className="text-8xl mb-6"
                       >
-                        🎭
-                      </motion.span>
-                    </motion.div>
+                        <motion.span
+                          animate={{ rotate: [0, -360] }}
+                          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                        >
+                          🎭
+                        </motion.span>
+                      </motion.div>
 
-                    <motion.h3
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
-                      className="text-4xl font-black mb-3 text-white drop-shadow-lg"
-                    >
-                      TRICK
-                    </motion.h3>
+                      <motion.h3
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: [1, 1.05, 1],
+                          textShadow: [
+                            "0 0 10px rgba(255,255,255,0.5)",
+                            "0 0 20px rgba(255,255,255,0.8)",
+                            "0 0 10px rgba(255,255,255,0.5)"
+                          ]
+                        }}
+                        transition={{
+                          delay: 1.3,
+                          duration: 0.4,
+                          ease: "easeOut",
+                          scale: { duration: 2.2, repeat: Infinity, ease: "easeInOut" },
+                          textShadow: { duration: 1.7, repeat: Infinity, ease: "easeInOut" }
+                        }}
+                        className="text-4xl font-black mb-3 text-white drop-shadow-lg"
+                      >
+                        TRICK
+                      </motion.h3>
 
-                    <motion.p
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
-                      className="text-red-100 text-lg font-medium"
-                    >
-                      Câu hỏi thử thách
-                    </motion.p>
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+                        className="text-red-100 text-lg font-medium"
+                      >
+                        Câu hỏi thử thách
+                      </motion.p>
 
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.7, duration: 0.4, ease: "easeOut" }}
-                      className="mt-6 text-2xl"
-                    >
-                      😈🎪
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 1.7, duration: 0.4, ease: "easeOut" }}
+                        className="mt-6 text-2xl"
+                      >
+                        😈🎪
+                      </motion.div>
                     </motion.div>
                   </motion.div>
-                </motion.div>
 
-                {/* Card Front - Selected State */}
-                <motion.div
-                  className="absolute inset-0 w-full h-full backface-hidden"
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateY(180deg)"
-                  }}
-                >
-                  <div className="w-full h-full bg-gradient-to-br from-orange-400 via-orange-600 to-orange-800 flex flex-col items-center justify-center relative overflow-hidden">
-                    {/* Success Particles Background */}
-                    <div className="absolute inset-0">
-                      {trickParticles.map((particle) => (
-                        <motion.div
-                          key={particle.id}
-                          className="absolute w-2 h-2 bg-white rounded-full"
-                          initial={{
-                            x: particle.x,
-                            y: particle.y,
-                            opacity: 0,
-                            scale: 0
-                          }}
-                          animate={{
-                            opacity: [0, 1, 0],
-                            scale: [0, 1, 0],
-                            x: particle.x,
-                            y: particle.y,
-                          }}
-                          transition={{
-                            duration: 2.5,
-                            repeat: Infinity,
-                            delay: particle.delay,
-                            ease: "easeOut"
-                          }}
-                        />
-                      ))}
+                  {/* Card Front - Selected State */}
+                  <motion.div
+                    className="absolute inset-0 w-full h-full backface-hidden"
+                    style={{
+                      backfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)"
+                    }}
+                  >
+                    <div className="w-full h-full bg-gradient-to-br from-orange-400 via-orange-600 to-orange-800 flex flex-col items-center justify-center relative overflow-hidden">
+                      {/* Success Particles Background */}
+                      <div className="absolute inset-0">
+                        {trickParticles.map((particle) => (
+                          <motion.div
+                            key={particle.id}
+                            className="absolute w-2 h-2 bg-white rounded-full"
+                            initial={{
+                              x: particle.x,
+                              y: particle.y,
+                              opacity: 0,
+                              scale: 0
+                            }}
+                            animate={{
+                              opacity: [0, 1, 0],
+                              scale: [0, 1, 0],
+                              x: particle.x,
+                              y: [particle.y, particle.y - 25, particle.y],
+                              rotate: [0, -180, -360]
+                            }}
+                            transition={{
+                              duration: 3.5,
+                              repeat: Infinity,
+                              delay: particle.delay,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1], rotate: [0, -10, 10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-8xl mb-6 z-10"
+                      >
+                        🎪
+                      </motion.div>
+                      <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg z-10">
+                        TRICK
+                      </h3>
+                      <p className="text-orange-100 text-xl font-bold z-10">
+                        Đã chọn! 🎉
+                      </p>
                     </div>
-
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], rotate: [0, -10, 10, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      className="text-8xl mb-6 z-10"
-                    >
-                      🎪
-                    </motion.div>
-                    <h3 className="text-4xl font-black mb-3 text-white drop-shadow-lg z-10">
-                      TRICK
-                    </h3>
-                    <p className="text-orange-100 text-xl font-bold z-10">
-                      Đã chọn! 🎉
-                    </p>
-                  </div>
+                  </motion.div>
                 </motion.div>
               </motion.div>
-            </motion.div>
             </motion.div>
 
           ) : (
@@ -943,9 +1057,22 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                   filter: "blur(6px)"
                 }}
                 animate={{
-                  scale: 1,
+                  scale: [1, 1.08, 1.05, 1.08, 1],
                   opacity: 1,
-                  rotateY: 0,
+                  rotateY: [0, 2, -2, 1, 0],
+                  y: [0, -15, -10, -15, 0],
+                  rotateX: [0, -3, 2, -1, 0],
+                  boxShadow: selectedPrompt === "truth"
+                    ? [
+                      "0 0 40px rgba(59, 130, 246, 0.6), 0 0 80px rgba(59, 130, 246, 0.3), 0 0 120px rgba(59, 130, 246, 0.1)",
+                      "0 0 60px rgba(59, 130, 246, 0.8), 0 0 100px rgba(59, 130, 246, 0.5), 0 0 140px rgba(59, 130, 246, 0.2)",
+                      "0 0 40px rgba(59, 130, 246, 0.6), 0 0 80px rgba(59, 130, 246, 0.3), 0 0 120px rgba(59, 130, 246, 0.1)"
+                    ]
+                    : [
+                      "0 0 40px rgba(239, 68, 68, 0.6), 0 0 80px rgba(239, 68, 68, 0.3), 0 0 120px rgba(239, 68, 68, 0.1)",
+                      "0 0 60px rgba(239, 68, 68, 0.8), 0 0 100px rgba(239, 68, 68, 0.5), 0 0 140px rgba(239, 68, 68, 0.2)",
+                      "0 0 40px rgba(239, 68, 68, 0.6), 0 0 80px rgba(239, 68, 68, 0.3), 0 0 120px rgba(239, 68, 68, 0.1)"
+                    ],
                   filter: "blur(0px)"
                 }}
                 transition={{
@@ -953,25 +1080,97 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                   type: "spring",
                   stiffness: 250,
                   damping: 20,
-                  delay: 0.1
+                  delay: 0.1,
+                  scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  rotateX: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
+                  rotateY: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
+                  boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                 }}
                 className="w-80 sm:w-96 h-[480px] sm:h-[560px] rounded-3xl overflow-hidden shadow-2xl relative"
-                style={{ transformStyle: "preserve-3d" }}
+                style={{
+                  transformStyle: "preserve-3d",
+                  willChange: "transform"
+                }}
               >
                 {/* Card Front - Shows the question content */}
                 <motion.div
-                  className={`absolute inset-0 w-full h-full backface-hidden ${
-                    selectedPrompt === "truth"
-                      ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
-                      : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
-                  } flex flex-col items-center justify-center relative overflow-hidden`}
+                  className={`absolute inset-0 w-full h-full backface-hidden ${selectedPrompt === "truth"
+                    ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
+                    : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
+                    } flex flex-col items-center justify-center relative overflow-hidden`}
                   style={{ backfaceVisibility: "hidden" }}
                 >
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full" />
-                    <div className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full" />
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full" />
+                    <motion.div
+                      className="absolute top-4 left-4 w-16 h-16 border-2 border-white/20 rounded-full"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.2, 0.4, 0.2]
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+                    <motion.div
+                      className="absolute bottom-4 right-4 w-12 h-12 border-2 border-white/20 rounded-full"
+                      animate={{
+                        scale: [1, 1.3, 1],
+                        opacity: [0.2, 0.5, 0.2]
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 0.5
+                      }}
+                    />
+                    <motion.div
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/20 rounded-full"
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: [0, 180, 360],
+                        opacity: [0.2, 0.3, 0.2]
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        rotate: { duration: 8, repeat: Infinity, ease: "linear" }
+                      }}
+                    />
+                  </div>
+
+                  {/* Animated Particles Background */}
+                  <div className="absolute inset-0">
+                    {SELECTED_PARTICLES.map((particle) => (
+                      <motion.div
+                        key={`selected-particle-${particle.id}`}
+                        className="absolute w-3 h-3 bg-white/30 rounded-full"
+                        initial={{
+                          x: particle.x,
+                          y: particle.y,
+                          opacity: 0,
+                          scale: 0
+                        }}
+                        animate={{
+                          opacity: [0, 0.6, 0],
+                          scale: [0, 1, 0],
+                          x: particle.x,
+                          y: [particle.yStart, particle.yMid, particle.yEnd],
+                          rotate: [0, 180, 360]
+                        }}
+                        transition={{
+                          duration: particle.duration,
+                          repeat: Infinity,
+                          delay: particle.delay,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    ))}
                   </div>
 
                   {/* Content */}
@@ -1024,15 +1223,23 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                       }}
                       animate={{
                         opacity: 1,
-                        y: 0,
-                        scale: 1,
-                        filter: "blur(0px)"
+                        y: [0, -5, 0],
+                        scale: [1, 1.15, 1.1, 1.15, 1],
+                        filter: "blur(0px)",
+                        textShadow: [
+                          "0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4)",
+                          "0 0 15px rgba(255,255,255,1), 0 0 30px rgba(255,255,255,0.6), 0 0 45px rgba(255,255,255,0.3)",
+                          "0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4)"
+                        ]
                       }}
                       transition={{
                         duration: 0.6,
                         ease: "easeOut",
                         type: "spring",
-                        stiffness: 300
+                        stiffness: 300,
+                        y: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+                        scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                        textShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                       }}
                       className="text-3xl font-black mb-4 text-white drop-shadow-lg uppercase"
                     >
@@ -1086,11 +1293,10 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
 
                 {/* Card Back - Hidden after flip */}
                 <motion.div
-                  className={`absolute inset-0 w-full h-full backface-hidden ${
-                    selectedPrompt === "truth"
-                      ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
-                      : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
-                  } flex flex-col items-center justify-center relative overflow-hidden`}
+                  className={`absolute inset-0 w-full h-full backface-hidden ${selectedPrompt === "truth"
+                    ? "bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900"
+                    : "bg-gradient-to-br from-red-400 via-red-600 to-red-900"
+                    } flex flex-col items-center justify-center relative overflow-hidden`}
                   style={{
                     backfaceVisibility: "hidden",
                     transform: "rotateY(180deg)"
