@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { Easing, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { IPlayerInfo, RoundState } from "@/types/socket";
 import { config } from "@/lib/socket.enum";
@@ -24,6 +24,7 @@ type SpinningWheelProps = {
     selectedPlayerId?: string | null;
     onSpinComplete?: () => void;
     spinTime?: number; // Override default spin time
+    is_preview?: boolean; // Override default spin time
 };
 
 // Sample players for demonstration when no real players exist
@@ -37,9 +38,10 @@ const SAMPLE_PLAYERS: IPlayerInfo[] = [
 ];
 
 
-export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = config.SPIN_TIME }: SpinningWheelProps) => {
+export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinTime = config.SPIN_TIME , is_preview = false}: SpinningWheelProps) => {
+    console.log("🚀 ~ SpinningWheel ~ players:", players,selectedPlayerId)
     const [rotation, setRotation] = useState(0);
-    const [isSpinning, setIsSpinning] = useState(false);
+    const [isSpinning, setIsSpinning] = useState(true);
 
     // Use sample players if no real players, otherwise combine sample + real players
     const displayPlayers = players.length === 0 ? SAMPLE_PLAYERS : players;
@@ -47,14 +49,18 @@ export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinT
 
     // Handle spinning logic
     useEffect(() => {
+        if (!is_preview) return;
+
+        console.log("🚀 ~ SpinningWheel ~ isSpinning:", isSpinning)
+        
         // If using sample players, keep spinning continuously
-        if (isUsingSamplePlayers) {
-            setIsSpinning(true);
-            const spinInterval = setInterval(() => {
-                setRotation(current => current + 1); // Slow continuous rotation
-            }, 50);
-            return () => clearInterval(spinInterval);
-        }
+        // if (isUsingSamplePlayers) {
+        //     setIsSpinning(true);
+        //     const spinInterval = setInterval(() => {
+        //         setRotation(current => current + 1); // Slow continuous rotation
+        //     }, 50);
+        //     return () => clearInterval(spinInterval);
+        // }
 
         // Reset wheel when no player is selected
         if (!selectedPlayerId) {
@@ -76,14 +82,15 @@ export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinT
 
         // Tính góc giữa của segment được chọn
         // Segment được vẽ từ góc -90 độ (phía trên)
-        const selectedSegmentMidAngle = selectedIndex * segmentAngle + segmentAngle / 2;
-
+        const startDeg = selectedIndex * segmentAngle - 90;
+        const endDeg = (selectedIndex + 1) * segmentAngle - 90;
         // Mũi tên chỉ lên trên (góc -90 độ trong SVG = 270 độ trong hệ quay)
         // Để đưa segment lên vị trí mũi tên, cần xoay: 270 - selectedSegmentMidAngle
-        const baseRotation = 270 - selectedSegmentMidAngle;
+        const middleDeg = (startDeg + endDeg) / 2;
+        const baseRotation = 270 - middleDeg;
 
         // Thêm nhiều vòng quay để tạo hiệu ứng quay nhanh rồi chậm dần (5-6 vòng)
-        const extraRotations = 5 * 360; // 5 vòng quay thêm
+        const extraRotations = 360 * (5 + Math.random() * 1.5);
         const targetRotation = baseRotation + extraRotations;
 
         // Bắt đầu quay
@@ -117,7 +124,7 @@ export const SpinningWheel = ({ players, selectedPlayerId, onSpinComplete, spinT
                     animate={{ rotate: rotation }}
                     transition={{
                         duration: isSpinning ? spinTime / 1000 : 0,
-                        ease: [0.25, 0.1, 0.25, 1], // Custom easing để quay chậm dần tự nhiên
+                        ease: "easeInOut" as Easing, // Custom easing để quay chậm dần tự nhiên
                     }}
                     style={{ transformOrigin: "center" }}
                     preserveAspectRatio="xMidYMid meet"

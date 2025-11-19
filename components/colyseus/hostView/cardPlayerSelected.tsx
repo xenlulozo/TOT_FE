@@ -2,11 +2,10 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo } from "react";
-import { IPlayerSelectedPayload } from "./interface/game.interface";
 import { config } from "@/lib/socket.enum";
-import { ConfettiButton } from "../ui/confetti";
-import { A_comratulation, ConfettiSideCannons } from "../Wheel/Confetti";
-import { AVATAR_EMOJI } from "./hostView/listPlayer";
+import { IPlayerSelectedPayload } from "../interface/game.interface";
+import { AVATAR_EMOJI } from "./listPlayer";
+import { A_comratulation } from "@/components/Wheel/Confetti";
 
 // Generate particle properties outside render to avoid Math.random in render
 const generateParticles = () => {
@@ -24,11 +23,10 @@ const generateParticles = () => {
 
 type SelectedPlayerPopupProps = {
     selectedPlayer: IPlayerSelectedPayload | null;
-    onClose?: () => void;
 };
 
 
-const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupProps) => {
+const CardPlayerSelectedPopup = ({ selectedPlayer }: SelectedPlayerPopupProps) => {
     console.log("🚀 ~ SelectedPlayerPopup ~ selectedPlayer:", selectedPlayer)
     // Pre-calculate particle properties to avoid Math.random in render
     const particles = useMemo(() => generateParticles(), []);
@@ -48,7 +46,7 @@ const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupPro
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                exit={{ transition:{duration: 0.5} , scale: 0.5 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
             >
                 <A_comratulation />
@@ -164,5 +162,5 @@ const SelectedPlayerPopup = ({ selectedPlayer, onClose }: SelectedPlayerPopupPro
     );
 };
 
-export default SelectedPlayerPopup;
+export default CardPlayerSelectedPopup;
 

@@ -4,7 +4,7 @@ import { Application, extend } from "@pixi/react";
 import { Container as PixiContainer, Graphics as PixiGraphics, Text as PixiText } from "pixi.js";
 import * as PIXI from "pixi.js";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IRoomStatePayload, IPlayerInfo } from "@/types/socket";
+import { IRoomStatePayload, IPlayerInfo, IStatePayload } from "@/types/socket";
 import CountdownPopup from "./CountdownPopup";
 import SelectedPlayerPopup from "./SelectedPlayerPopup";
 import ClientPromptPopup from "./ClientPromptPopup";
@@ -45,7 +45,7 @@ const RANDOM_NAMES = [
 ];
 
 export type ClientViewProps = {
-    roomState: IRoomStatePayload;
+    roomState: IStatePayload;
     me: IPlayerInfo;
     gameStarted: boolean;
     gameEnded?: boolean;

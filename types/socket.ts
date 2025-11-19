@@ -1,3 +1,5 @@
+import { RoomState } from "./ws.enum";
+
 export type PlayerInfo = {
     id: string;
     data?: {
@@ -25,6 +27,19 @@ export type IRoomStatePayload = {
     players: IPlayerInfo[];
     meta: Record<string, unknown>;
     hostId: string;
+};
+
+
+export interface CurrentPlayerWithPrompts {
+   player: PlayerInfo;
+   truthPromptId?: string;
+    trickPromptId?: string;
+  }
+export type IStatePayload = {
+    players: IPlayerInfo[];
+    state: RoomState;
+    roomId: string;
+    currentPlayerWithPrompts? : CurrentPlayerWithPrompts
 };
 export type RoomStatePayload = {
     players: PlayerInfo[];

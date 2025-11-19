@@ -18,6 +18,8 @@ const MotionDiv = motion.div;
 const MotionAnimatePresence = AnimatePresence;
 
 import { IPlayerSelectedPayload } from "./interface/game.interface";
+import { SparklesText } from "../ui/sparkles-text";
+import { Highlighter } from "../ui/highlighter";
 // import PixiCard from "./PixiCard";
 
 // Simple optimized card animation using CSS transforms only
@@ -468,46 +470,34 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
           suppressHydrationWarning={true}
         >
           {/* Header */}
-          <motion.div
+          {/* <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="text-center mb-12"
           >
-            {/* <motion.div
-              animate={{ rotate: [0, -5] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="inline-block mb-4"
-            >
-              <span className="text-6xl">🎯</span>
-            </motion.div>
-            <h2 className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-              {player?.name || "Người chơi"} chọn loại câu hỏi!
-            </h2>
-            <p className="text-white/70 text-xl font-medium">
-              Chọn Truth hoặc Trick để bắt đầu
-            </p> */}
-          </motion.div>
+
+          </motion.div> */}
 
           {/* Cards Container */}
           {!selectedPrompt ? (
             /* Selection Phase - Show both cards */
             <motion.div
-              key="selection-phase"
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{
-                opacity: 0,
-                scale: 0.9,
-                y: 30,
-                transition: { duration: 0.4, ease: "easeInOut" }
-              }}
-              transition={{
-                duration: 0.6,
-                ease: "easeOut",
-                staggerChildren: 0.15,
-                delayChildren: 0.3
-              }}
+              // key="selection-phase"
+              // initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              // animate={{ opacity: 1, scale: 1, y: 0 }}
+              // exit={{
+              //   opacity: 0,
+              //   scale: 0.9,
+              //   y: 30,
+              //   transition: { duration: 0.4, ease: "easeInOut" }
+              // }}
+              // transition={{
+              //   duration: 0.6,
+              //   ease: "easeOut",
+              //   staggerChildren: 0.15,
+              //   delayChildren: 0.3
+              // }}
               className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12"
             >
               {/* Truth Card */}
@@ -679,31 +669,33 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                           delay: 1.1,
                           duration: 0.4,
                           ease: "easeOut",
-                          scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                          // scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
                           textShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                         }}
-                        className="text-4xl font-black mb-3 text-white drop-shadow-lg"
+                        className=" font-black mb-3 text-white drop-shadow-lg"
                       >
-                        TRUTH
+                        <SparklesText> TRUTH</SparklesText>
                       </motion.h3>
 
                       <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
+                        // initial={{ opacity: 0, y: 10 }}
+                        // animate={{ opacity: 1, y: 0 }}
+                        // transition={{ delay: 1.3, duration: 0.4, ease: "easeOut" }}
                         className="text-blue-100 text-lg font-medium"
                       >
-                        Câu hỏi thật thà
+                        <Highlighter action="circle" color="#e02f2f" strokeWidth={2} animationDuration={1000} iterations={1} padding={3} multiline={true} isView={true} >
+                          Câu hỏi thật thà
+                        </Highlighter>
                       </motion.p>
 
-                      <motion.div
+                      {/* <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
                         className="mt-6 text-2xl"
                       >
                         🤔💭
-                      </motion.div>
+                      </motion.div> */}
                     </motion.div>
                   </motion.div>
 
@@ -929,34 +921,36 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                           ]
                         }}
                         transition={{
-                          delay: 1.3,
-                          duration: 0.4,
-                          ease: "easeOut",
-                          scale: { duration: 2.2, repeat: Infinity, ease: "easeInOut" },
+                          // delay: 1.3,
+                          // duration: 0.4,
+                          // ease: "easeOut",
+                          // scale: { duration: 2.2, repeat: Infinity, ease: "easeInOut" },
                           textShadow: { duration: 1.7, repeat: Infinity, ease: "easeInOut" }
                         }}
                         className="text-4xl font-black mb-3 text-white drop-shadow-lg"
                       >
-                        TRICK
+                        <SparklesText> TRICK</SparklesText>
                       </motion.h3>
 
                       <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        // initial={{ opacity: 0, y: 10 }}
+                        // animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
                         className="text-red-100 text-lg font-medium"
                       >
+                     <Highlighter action="circle" color="#87CEFA" strokeWidth={2} animationDuration={1000} iterations={1} padding={2} multiline={true} isView={true} > 
                         Câu hỏi thử thách
+                        </Highlighter>
                       </motion.p>
 
-                      <motion.div
+                      {/* <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 1.7, duration: 0.4, ease: "easeOut" }}
                         className="mt-6 text-2xl"
                       >
                         😈🎪
-                      </motion.div>
+                      </motion.div> */}
                     </motion.div>
                   </motion.div>
 
@@ -1280,15 +1274,16 @@ export const PromptSelection = ({ selectedPlayer, selectedPrompt, promptContent,
                       </motion.p>
                     </motion.div>
 
-                    <motion.div
+                    {/* <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 1.4, duration: 0.4, ease: "easeOut" }}
                       className="mt-6 text-2xl"
                     >
                       🎯✨
-                    </motion.div>
+                    </motion.div> */}
                   </motion.div>
+                  
                 </motion.div>
 
                 {/* Card Back - Hidden after flip */}

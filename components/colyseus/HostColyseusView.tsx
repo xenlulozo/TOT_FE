@@ -3,54 +3,40 @@
 import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState, useRef, useMemo } from "react";
-import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType } from "@/types/socket";
+import { IPlayerInfo, IRoomStatePayload, PlayerSelectedPayload, PromptOption, RoomStatePayload, RoundState, TotPromptType, IStatePayload } from "@/types/socket";
 import SpinningWheel from "./SpinningWheel";
 import SelectedPlayerPopup from "./SelectedPlayerPopup";
 import CountdownPopup from "./CountdownPopup";
 import PromptSelection from "./PromptSelection";
 import { IPlayerSelectedPayload } from "./interface/game.interface";
+import { ComicText } from "../ui/comic-text";
+import { Highlighter } from "../ui/highlighter";
+import { Particles } from "../ui/particles";
+import { ListPlayer } from "./hostView/listPlayer";
+
+// Animated background component for 4K display
+const AnimatedBackground = () => (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* Gradient background */}
+        <Particles
+            className="absolute inset-0 z-20"
+            quantity={120}
+            ease={80}
+            color={"#f7e431"}
+            size={0.4}
+            refresh={true}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900" />
+
+    </div>
+);
 
 
-const AVATAR_EMOJI: Record<string, string> = {
-    fox: "🦊",
-    bear: "🐻",
-    tiger: "🐯",
-    panda: "🐼",
-    koala: "🐨",
-    monkey: "🐵",
-    unicorn: "🦄",
-    cat: "🐱",
-    dog: "🐶",
-    rabbit: "🐰",
-    pig: "🐷",
-    chicken: "🐔",
-    lion: "🦁",
-    cow: "🐮",
-    sheep: "🐑",
-    elephant: "🐘",
-    heart: "❤️",
-    star: "⭐️",
-    tree: "🌳",
-    mushroom: "🍄",
-    tulip: "🌷",
-    cactus: "🌵",
-    wrench: "🔧",
-    hammer: "🔨",
-    key: "🔑",
-    lightbulb: "💡",
-    umbrella: "☂️",
-    book: "📚",
-    camera: "📷",
-    guitar: "🎸",
-    donut: "🍩",
-    pizza: "🍕",
-    cheese: "🧀",
-    watermelon: "🍉",
-    lemon: "🍋"
-};
+
 
 export type HostViewProps = {
-    roomState: IRoomStatePayload;
+    roomState: IStatePayload;
     me: IPlayerInfo;
     selected: IPlayerSelectedPayload | null;
     promptChoice: { type: TotPromptType; content: string } | null;
@@ -255,282 +241,301 @@ const HostColyseusView = ({
     // - isSpinning = true → hiện bánh xe, ẩn thẻ bài
     // - isSpinning = false → ẩn bánh xe, hiện thẻ bài (nếu có)
     const hasCards = activePlayer && (truthOption || trickOption);
-    const showWheel = isSpinning;
-    const showCards = !isSpinning && hasCards && !turnFinished;
 
-    const renderAvatar = (player: IPlayerInfo, size: "md" | "lg" = "md") => {
-        const avatarId = player.avatar as string;
-        const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
-        const displayName = player.name as string ?? "P";
-        const fallbackInitial = displayName[0]?.toUpperCase() ?? "P";
-        const baseClass =
-            "inline-flex items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white";
-        const sizeClass = size === "lg" ? "w-20 h-20 text-5xl" : "w-10 h-10 text-2xl";
-
-        if (emoji) {
-            return (
-                <span className={`${baseClass} ${sizeClass}`} aria-label={displayName}>
-                    {emoji}
-                </span>
-            );
-        }
-
-        return (
-            <span
-                className={`${baseClass} ${size === "lg" ? "w-20 h-20 text-3xl font-black" : "w-10 h-10 text-lg font-bold"
-                    }`}
-                aria-label={displayName}
-            >
-                {fallbackInitial}
-            </span>
-        );
-    };    // Component popup chúc mừng với animation pháo
-    const CelebrationPopup = ({ player }: { player: IPlayerInfo }) => {
-        const playerName = player.name ?? "Player";
-        const avatarId = player.avatar as string;
-        const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
-
-        // Pre-calculate firework properties to avoid Math.random in render
-        type Firework = {
-            id: number;
-            left: number;
-            top: number;
-            color: string;
-            yOffset: number;
-            xOffset: number;
-            delay: number;
-        };
-
-        const fireworks = useMemo((): Firework[] =>
-            [...Array(20)].map((_, i) => ({
-                id: i,
-                left: Math.random() * 100,
-                top: Math.random() * 100,
-                color: ["#ff6b6b", "#4ecdc4", "#ffe66d", "#ff8b94", "#95e1d3"][
-                    Math.floor(Math.random() * 5)
-                ] as string,
-                yOffset: -100 + Math.random() * 200,
-                xOffset: -50 + Math.random() * 100,
-                delay: Math.random() * 0.5,
-            })), []
-        );
-
-        return (
-            <AnimatePresence>
-                {showCelebrationPopup && !showCountdown ? (
-                    <motion.div
-                        key="celebration-popup"
-                        className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                    >
-                        {/* Background overlay */}
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-                        {/* Pháo chúc mừng */}
-                        <div className="absolute inset-0 overflow-hidden">
-                            {fireworks.map((firework) => (
-                                <motion.div
-                                    key={firework.id}
-                                    className="absolute w-2 h-2 rounded-full"
-                                    style={{
-                                        left: `${firework.left}%`,
-                                        top: `${firework.top}%`,
-                                        background: firework.color,
-                                    }}
-                                    initial={{ scale: 0, opacity: 1 }}
-                                    animate={{
-                                        scale: [0, 1.5, 0],
-                                        opacity: [1, 1, 0],
-                                        y: [0, firework.yOffset],
-                                        x: [0, firework.xOffset],
-                                    }}
-                                    transition={{
-                                        duration: 1.5,
-                                        delay: firework.delay,
-                                        repeat: Infinity,
-                                        repeatDelay: 0.5,
-                                    }}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Popup nội dung */}
-                        <motion.div
-                            className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-yellow-400"
-                            initial={{ scale: 0.5, opacity: 0, y: 50 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.8, opacity: 0, y: -20 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.5 }}
-                        >
-                            <div className="text-center">
-                                <motion.div
-                                    className="text-8xl mb-4"
-                                    animate={{
-                                        scale: [1, 1.2, 1],
-                                        rotate: [0, 10, -10, 0],
-                                    }}
-                                    transition={{
-                                        duration: 0.5,
-                                        repeat: Infinity,
-                                        repeatDelay: 0.3,
-                                    }}
-                                >
-                                    🎉
-                                </motion.div>
-                                <h2 className="text-3xl font-bold text-yellow-500 mb-4">Chúc mừng!</h2>
-                                <div className="flex items-center justify-center gap-4 mb-4">
-                                    {emoji ? (
-                                        <span className="text-6xl">{emoji}</span>
-                                    ) : (
-                                        renderAvatar(player, "lg")
-                                    )}
-                                    <p className="text-2xl font-bold text-neutral-800 dark:text-neutral-100">
-                                        {playerName}
-                                    </p>
-                                </div>
-                                <p className="text-lg text-neutral-600 dark:text-neutral-400">
-                                    Bạn đã được chọn!
-                                </p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
-        );
-    };
 
     // Nếu game đã bắt đầu và chưa kết thúc, hiển thị layout với bánh xe, danh sách và thẻ bài
     // Khi game kết thúc, quay về UI ban đầu (QR code)
     // Bánh xe luôn hiển thị ngay từ khi game bắt đầu
     if (gameStarted && !gameEnded) {
         return (
-            <div className="h-screen overflow-hidden flex flex-col">
-                <div className="flex-1 flex gap-6">
-                    {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
-                    <div className="flex-1 flex flex-col gap-6">
-                        {/* Bánh xe quay - luôn hiện khi game đã bắt đầu */}
-                        <motion.div
-                            key="wheel"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.3 }}
-                            className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-2xl font-bold">
-                                    {isSpinning ? "Đang quay..." : "Bánh xe quay"}
-                                </h3>
+            <div className="h-screen overflow-hidden">
+                <AnimatedBackground />
+                <div className="h-screen overflow-hidden flex flex-col relative">
+                    {/* Header với logo và title */}
+                    <motion.div
+                        initial={{ y: -100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="flex-shrink-0 p-8 pb-4"
+                    >
+                        <div className="flex items-center justify-center gap-6">
+
+                            <div className="text-center">
+                                <h1 className="text-6xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                                    TOT CHALLENGE
+                                </h1>
+                                <p className="text-2xl text-white/80 font-medium">
+                                    Game đang diễn ra
+                                </p>
                             </div>
-                            <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
-                                <SpinningWheel
-                                    players={wheelPlayers}
-                                    selectedPlayerId={isSpinning ? spinningPlayerId : null}
-                                    onSpinComplete={onSpinComplete}
-                                />
-                            </div>
-                        </motion.div>
+                        </div>
+                    </motion.div>
+
+                    <div className="flex-1 flex gap-8 px-8 pb-8">
+                        {/* Bên trái: Bánh xe quay hoặc thẻ bài */}
+                        <div className="flex-1 flex flex-col gap-8">
+                            {/* Bánh xe quay - luôn hiện khi game đã bắt đầu */}
+                            <motion.div
+                                key="wheel"
+                                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: -50 }}
+                                transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
+                                className="flex flex-col rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 shadow-2xl min-h-[600px]"
+                            >
+                                <div className="flex-1 flex items-center justify-center overflow-hidden">
+                                    <SpinningWheel
+                                        players={wheelPlayers}
+                                        selectedPlayerId={isSpinning ? spinningPlayerId : null}
+                                        onSpinComplete={onSpinComplete}
+                                    />
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* Bên phải: Danh sách người chơi và người đã chơi */}
+                        <div className="flex flex-col gap-8 w-[480px]">
+                            {/* Danh sách người chơi */}
+
+                            <ListPlayer roomState={roomState} me={me} />
+
+                        </div>
                     </div>
 
-                    {/* Bên phải: Danh sách người chơi và người đã chơi */}
-                    <div className="flex flex-col gap-6 w-80">
-                        {/* Danh sách người chơi */}
-                        <aside className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
-                            <h3 className="text-2xl font-bold mb-4">Người chơi</h3>
-                            {participants.length === 0 ? (
-                                <p className="text-neutral-500">Chưa có người chơi</p>
-                            ) : (
-                                <ul className="space-y-3 max-h-[300px] overflow-y-auto">
-                                    {participants.map((player) => {
-                                        const isActive = player.id === activePlayer?.id;
-                                        return (
-                                            <li
-                                                key={player.id}
-                                                className={`rounded-lg border p-4 transition ${isActive
-                                                    ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                                                    : "border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    {renderAvatar(player)}
-                                                    <div className="flex-1">
-                                                        <p className="font-medium">
-                                                            {player.name ?? "Unnamed Player"}
-                                                        </p>
-                                                        {isActive && (
-                                                            <p className="text-xs text-green-600 dark:text-green-400">
-                                                                Đang chơi
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </aside>
+                    {/* Popup chúc mừng */}
+                    {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
 
-                        {/* Danh sách người đã chơi */}
-                        {completedPlayers.length > 0 && (
-                            <aside className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg">
-                                <h3 className="text-2xl font-bold mb-4">Đã chơi</h3>
-                                <ul className="space-y-3 max-h-[200px] overflow-y-auto">
-                                    {completedPlayers.map((player) => (
-                                        <li
-                                            key={player.id}
-                                            className="rounded-lg border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-800/50 opacity-60 p-4"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {renderAvatar(player)}
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-neutral-600 dark:text-neutral-400">
-                                                        {player.name ?? "Unnamed Player"}
-                                                    </p>
-                                                    <p className="text-xs text-neutral-500">Đã hoàn thành</p>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </aside>
-                        )}
-                    </div>
-                </div>
-
-                {/* Popup chúc mừng */}
-                {/* {activePlayer && <CelebrationPopup player={activePlayer} />} */}
-
-                {/* Selected Player Popup - Hide during countdown */}
-                {!showCountdown && !showGameStartCountdown && (
-                    <SelectedPlayerPopup
-                        selectedPlayer={selectedPlayer ?? null}
-                        onClose={onSelectedPlayerClose}
-                    />
-                )}
-
-                {/* Prompt Selection - Hide during countdown */}
-                <AnimatePresence>
-                    {showPromptSelection && !showCountdown && !showGameStartCountdown && (
-                        <PromptSelection
-                            selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
-                            selectedPrompt={selectedPrompt ?? null} // Which prompt was selected (from server events)
-                            promptContent={promptContent} // Content of the selected prompt
-                            onPromptSelected={onPromptSelected || (() => { })}
+                    {/* Selected Player Popup - Hide during countdown */}
+                    {!showCountdown && !showGameStartCountdown && (
+                        <SelectedPlayerPopup
+                            selectedPlayer={selectedPlayer ?? null}
+                            onClose={onSelectedPlayerClose}
                         />
                     )}
-                </AnimatePresence>
 
-                {/* Game Start Countdown - Full screen overlay */}
-                <CountdownPopup
-                    show={showGameStartCountdown}
-                    onComplete={handleGameStartCountdownComplete}
-                    duration={3}
-                    startNumber={3}
-                />
+                    {/* Prompt Selection - Hide during countdown */}
+                    <AnimatePresence>
+                        {showPromptSelection && !showCountdown && !showGameStartCountdown && (
+                            <PromptSelection
+                                selectedPlayer={selectedPlayer ?? null} // Data from PLAYER_SELECTED event
+                                selectedPrompt={selectedPrompt ?? null} // Which prompt was selected (from server events)
+                                promptContent={promptContent} // Content of the selected prompt
+                                onPromptSelected={onPromptSelected || (() => { })}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    {/* Game Start Countdown - Full screen overlay */}
+                    <CountdownPopup
+                        show={showGameStartCountdown}
+                        onComplete={handleGameStartCountdownComplete}
+                        duration={3}
+                        startNumber={3}
+                    />
+
+                    {/* Turn Countdown - Full screen overlay */}
+                    <CountdownPopup
+                        show={showCountdown}
+                        onComplete={handleCountdownComplete}
+                        duration={3}
+                        startNumber={3}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // Layout khi game chưa bắt đầu: 3 vùng (QR, Bánh xe, Danh sách)
+    return (
+        <div className="h-screen overflow-hidden">
+            <AnimatedBackground />
+
+            <section className="h-screen overflow-hidden flex flex-col relative">
+                {/* Header với logo */}
+                <motion.div
+                    initial={{ y: -100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="flex-shrink-0 p-8 pb-4"
+                >
+                    <div className="flex items-center justify-center gap-6">
+
+                        <div className="text-center">
+                            <h1 className="text-6xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                                TOT CHALLENGE
+                            </h1>
+                            <p className="text-2xl text-white/80 font-medium">
+                                Chờ người chơi tham gia
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                <div className="flex-1 grid grid-cols-3 gap-8 px-8 pb-8 overflow-hidden">
+                    {/* Vùng 1: QR Code */}
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.6 }}
+                        className="flex flex-col items-center justify-center rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 overflow-hidden shadow-2xl"
+                    >
+                        {roomUrl ? (
+                            <>
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                                    className="text-center mb-6"
+                                >
+                                    <h2 className="text-4xl font-bold text-white mb-2">QR Code tham gia</h2>
+                                    <p className="text-lg text-white/70">Quét để tham gia phòng chơi</p>
+                                </motion.div>
+                                <div className="flex flex-col items-center gap-6 flex-1 justify-center">
+                                    <motion.div
+                                        className="rounded-2xl border-4 border-white/30 p-6 bg-white/95 shadow-2xl"
+                                        // whileHover={{ scale: 1.05 }}
+                                        transition={{ type: "spring", stiffness: 300 }}
+                                    >
+                                        <QRCodeSVG value={roomUrl} size={280} level="H" />
+                                    </motion.div>
+                                    <div className="text-center max-w-full">
+                                        <p className="text-base text-white/90 break-all bg-black/20 rounded-lg p-3 font-mono">
+                                            {roomUrl}
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="text-center"
+                            >
+                                <div className="text-6xl mb-4">🔄</div>
+                                <p className="text-xl text-white/70">Đang tải QR code...</p>
+                            </motion.div>
+                        )}
+                    </motion.div>
+
+                    {/* Vùng 2: Spinning Wheel */}
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.4, duration: 0.6 }}
+                        className="flex flex-col rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 overflow-hidden shadow-2xl"
+                    >
+                        {/* <div className="flex items-center justify-center mb-6">
+                            {participants.length > 0 && (
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    type="button"
+                                    className="rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-4 text-white text-2xl font-bold shadow-2xl hover:shadow-green-500/25 transition-all duration-300 border-2 border-white/20"
+                                    onClick={onStartGame}
+                                >
+                                    🚀 Bắt đầu game
+                                </motion.button>
+                            )}
+                        </div> */}
+                        <div className="flex-1 flex items-center justify-center overflow-hidden">
+                            {participants.length > 0 ? (
+                                <SpinningWheel
+                                    players={wheelPlayers}
+                                    selectedPlayerId={null} // Không spin khi preview
+                                    onSpinComplete={() => { }} // Không cần callback khi preview
+                                />
+                            ) : (
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="text-center"
+                                >
+                                    <div className="text-8xl mb-6">🎯</div>
+                                    <p className="text-2xl text-white/70 mb-2">Chờ người chơi tham gia</p>
+                                    <p className="text-lg text-white/50">Bánh xe sẽ xuất hiện khi có người chơi</p>
+                                </motion.div>
+                            )}
+                        </div>
+                    </motion.div>
+
+                    {/* Vùng 3: Danh sách người chơi */}
+                    <ListPlayer roomState={roomState} me={me} />
+                    {/* <motion.aside
+                        initial={{ x: 100, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.6, duration: 0.6 }}
+                        className="flex flex-col rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 overflow-hidden shadow-2xl"
+                    >
+                        <div className="flex items-center gap-4 mb-6">
+                            <ComicText fontSize={2.1} >Người chơi</ComicText>
+                            <div className="ml-auto bg-white/20 rounded-full px-4 py-2">
+                                <span className="text-xl font-bold text-white">{participants.length}</span>
+                            </div>
+                        </div>
+                        {participants.length === 0 ? (
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="text-center py-16 flex-1 flex flex-col items-center justify-center"
+                            >
+                                <div className="text-8xl mb-6 animate-bounce">📱</div>
+                                <p className="text-2xl text-white/70 mb-2">Chưa có ai tham gia</p>
+                                <p className="text-lg text-white/50">Hãy chia sẻ QR code để mời bạn bè!</p>
+                            </motion.div>
+                        ) : (
+                            <motion.ul
+                                className="space-y-4 overflow-y-auto flex-1"
+                                initial="hidden"
+                                animate="visible"
+                                variants={{
+                                    visible: {
+                                        transition: {
+                                            staggerChildren: 0.1,
+                                        },
+                                    },
+                                }}
+                            >
+                                {participants.map((player) => {
+                                    const isActive = player.id === activePlayer?.id;
+                                    return (
+                                        <motion.li
+                                            key={player.id}
+                                            variants={{
+                                                hidden: { x: 50, opacity: 0 },
+                                                visible: { x: 0, opacity: 1 },
+                                            }}
+                                            className={`rounded-2xl border p-6 transition-all duration-300 hover:scale-105 ${
+                                                isActive
+                                                    ? "border-yellow-400 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 shadow-lg shadow-yellow-400/25"
+                                                    : "border-white/20 bg-white/5 hover:bg-white/10"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                {renderAvatar(player, "lg")}
+                                                <div className="flex-1">
+                                                    <p className="text-xl font-bold text-white mb-1">
+                                                    <Highlighter action="highlight" color="#87CEFA">  {player?.name ?? "Unnamed Player"}  </Highlighter>
+
+                                                    </p>
+                                                    {isActive && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                                            <p className="text-sm text-green-400 font-medium">
+                                                                Đang chơi 🎯
+                                                            </p>
+                                                        </motion.div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.li>
+                                    );
+                                })}
+                            </motion.ul>
+                        )}
+                    </motion.aside> */}
+                </div>
 
                 {/* Turn Countdown - Full screen overlay */}
                 <CountdownPopup
@@ -539,113 +544,8 @@ const HostColyseusView = ({
                     duration={3}
                     startNumber={3}
                 />
-            </div>
-
-        );
-    }
-
-    // Layout khi game chưa bắt đầu: 3 vùng (QR, Bánh xe, Danh sách)
-    return (
-        <section className="h-screen overflow-hidden flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg">
-            <div className="flex-1 grid grid-cols-3 gap-6 p-6 overflow-hidden">
-                {/* Vùng 1: QR Code */}
-                <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 overflow-hidden">
-                    {roomUrl ? (
-                        <>
-                            <h2 className="text-2xl font-bold mb-4 text-center">QR Code để tham gia</h2>
-                            <div className="flex flex-col items-center gap-4 flex-1 justify-center">
-                                <div className="rounded-lg border-4 border-neutral-200 dark:border-neutral-700 p-4 bg-white">
-                                    <QRCodeSVG value={roomUrl} size={240} level="H" />
-                                </div>
-                                <p className="text-sm text-neutral-600 dark:text-neutral-400 break-all text-center max-w-full">
-                                    {roomUrl}
-                                </p>
-                                <p className="text-xs text-neutral-500 text-center">
-                                    Quét QR code này để tham gia phòng chơi
-                                </p>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="text-neutral-500">Loading QR code...</p>
-                    )}
-                </div>
-
-                {/* Vùng 2: Spinning Wheel */}
-                <div className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 overflow-hidden">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-2xl font-bold">Bánh xe quay</h3>
-                        {participants.length > 0 && (
-                            <button
-                                type="button"
-                                className="rounded-lg bg-blue-600 px-6 py-2 text-white font-semibold shadow hover:bg-blue-700 transition"
-                                onClick={onStartGame}
-                            >
-                                Bắt đầu game
-                            </button>
-                        )}
-                    </div>
-                    <div className="flex-1 flex items-center justify-center overflow-hidden">
-                        {participants.length > 0 ? (
-                            <SpinningWheel
-                                players={wheelPlayers}
-                                selectedPlayerId={null} // Không spin khi preview
-                                onSpinComplete={() => { }} // Không cần callback khi preview
-                            />
-                        ) : (
-                            <div className="text-center text-neutral-500">
-                                <p className="text-lg mb-2">🎯</p>
-                                <p>Chờ người chơi tham gia</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Vùng 3: Danh sách người chơi */}
-                <aside className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 overflow-hidden">
-                    <h3 className="text-2xl font-bold mb-4">Danh sách người chơi {participants.length}</h3>
-                    {participants.length === 0 ? (
-                        <p className="text-neutral-500">Chưa có người chơi</p>
-                    ) : (
-                        <ul className="space-y-3 overflow-y-auto flex-1">
-                            {participants.map((player) => {
-                                const isActive = player.id === activePlayer?.id;
-                                return (
-                                    <li
-                                        key={player.id}
-                                        className={`rounded-lg border p-4 transition ${isActive
-                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                                            : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {renderAvatar(player)}
-                                            <div className="flex-1">
-                                                <p className="font-medium">
-                                                    {player?.name ?? "Unnamed Player"}
-                                                </p>
-                                                {isActive && (
-                                                    <p className="text-xs text-green-600 dark:text-green-400">
-                                                        Đang chơi
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                </aside>
-            </div>
-
-            {/* Turn Countdown - Full screen overlay */}
-            <CountdownPopup
-                show={showCountdown}
-                onComplete={handleCountdownComplete}
-                duration={3}
-                startNumber={3}
-            />
-        </section>
+            </section>
+        </div>
     );
 };
 

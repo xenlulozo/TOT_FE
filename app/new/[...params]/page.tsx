@@ -5,33 +5,42 @@ import { Room } from "colyseus.js";
 import { showConnectionStatus } from "@/lib/wsClient";
 import HostColyseusView from "@/components/colyseus/HostColyseusView";
 import ClientColyseusView from "@/components/colyseus/ClientColyseusView";
-import { RoundState, IRoomStatePayload, IPlayerInfo, PlayerSelectedPayload, TotPromptType } from "@/types/socket";
+import { RoundState, IRoomStatePayload, IPlayerInfo, PlayerSelectedPayload, TotPromptType, IStatePayload, CurrentPlayerWithPrompts } from "@/types/socket";
 import { RoomState } from "@/types/ws.enum";
 import { SocketEnum } from "@/lib/socket.enum";
 import { IHostPayload } from "@/components/colyseus/interface/host.interface";
 import { MapSchema } from "@colyseus/schema";
 import { IPlayerSelectedPayload } from "@/components/colyseus/interface/game.interface";
+import { AnimatePresence } from "motion/react";
+import { EPopupName, usePopupStore } from "@/components/colyseus/popupState";
+import TowCard from "@/components/colyseus/hostView/twoCard";
+import CountdownPopup from "@/components/colyseus/CountdownPopup";
+import { CardSelectedPopup } from "@/components/colyseus/hostView/cardSelected";
+import CardPlayerSelectedPopup from "@/components/colyseus/hostView/cardPlayerSelected";
+import { HostView } from "@/components/colyseus/hostView/hostView";
 
 // Type for Colyseus room state
 type ColyseusRoomState = {
     players?: IPlayerInfo[];
-    meta?: Record<string, unknown>;
-    hostId?: string;
-    [key: string]: unknown;
+    roomId?: string;
+    state ? : RoomState;
+    currentPlayerWithPrompts ? : CurrentPlayerWithPrompts;
 };
 
 const PixiRoomPage = () => {
     const params = useParams();
+    const activePopup = usePopupStore((s) => s.activePopup);
+
     console.log("🚀 ~ PixiRoomPage ~ params:", params.params)
     const [roomId, host] = params.params || [];
 
     // State management
     const [room, setRoom] = useState<Room | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
-    const [roomState, setRoomState] = useState<IRoomStatePayload>({
+    const [roomState, setRoomState] = useState<IStatePayload>({
         players: [],
-        meta: {},
-        hostId: ""
+        state: RoomState.READY,
+        roomId: ""
     });
     const [selected, setSelected] = useState<IPlayerSelectedPayload | null>(null);
     const [promptChoice, setPromptChoice] = useState<{ type: TotPromptType; content: string } | null>(null);
@@ -169,8 +178,8 @@ const PixiRoomPage = () => {
                     // Update roomState with new members
                     setRoomState((prevState) => ({
                         players: playersArray,
-                        meta: prevState.meta,
-                        hostId: detectedHostId || prevState.hostId
+                        state: prevState.state,
+                        roomId: prevState.roomId,
                     }));
                 });
 
@@ -189,12 +198,19 @@ const PixiRoomPage = () => {
                     if (gameState === RoomState.PLAYING) {
                         setGameStarted(true);
                     }
+                    setRoomState((prevState) => ({
+                        ...prevState,
+                        state: gameState || RoomState.READY
+                    }));
+                    usePopupStore.getState().openPopup(EPopupName.CountdownPopup);
                 });
 
                 // Handle profile update response if needed
                 connectedRoom.onMessage(SocketEnum.UPDATE_PROFILE, (message: unknown) => {
                     console.log("🚀 ~ UPDATE_PROFILE response:", message);
                     // Profile update is handled via UPDATE_MEMBERS
+
+
                 });
 
                 // Handle SPIN event
@@ -214,8 +230,8 @@ const PixiRoomPage = () => {
                 });
 
                 // Handle PLAYER_SELECTED event - provides player data for prompt selection
-                connectedRoom.onMessage(SocketEnum.PLAYER_SELECTED, (message: IPlayerSelectedPayload ) => {
-                    console.log("🚀 ~ PLAYER_SELECTED received:", message ,typeof message);
+                connectedRoom.onMessage(SocketEnum.PLAYER_SELECTED, (message: IPlayerSelectedPayload) => {
+                    console.log("🚀 ~ PLAYER_SELECTED received:", message, typeof message);
 
                     if (typeof message === 'object' && message !== null) {
                         const payload = message as IPlayerSelectedPayload;
@@ -226,6 +242,9 @@ const PixiRoomPage = () => {
                         setSelectedPlayer(payload); // Store player data
                         setShowSelectedPlayerPopup(true); // Show the popup
 
+                        usePopupStore.getState().openPopup(EPopupName.CardPlayerSelectedPopup);
+
+                      
                         // Log after state update (useEffect will handle this)
                         // setTimeout(() => {
                         //     console.log("🚀 ~ PLAYER_SELECTED ~ selectedPlayer state should be updated now");
@@ -243,6 +262,9 @@ const PixiRoomPage = () => {
                     // It can arrive before or after PLAYER_SELECTED
                     setShowPromptSelection(true);
                     setSelectedPrompt(null); // Reset prompt selection
+
+                    usePopupStore.getState().openPopup(EPopupName.TowCard);
+
                     console.log("🚀 ~ After PICK_PROMPT - showPromptSelection set to true, popup should show");
                 });
 
@@ -255,6 +277,9 @@ const PixiRoomPage = () => {
                         setSelectedPrompt("truth");
                         setPromptContent(payload.content || null);
                         // Don't hide prompt selection - wait for END_TURN event
+                        usePopupStore.getState().closePopup(EPopupName.TowCard);
+                        usePopupStore.getState().openPopup(EPopupName.CardSelectedPopup);
+
                         console.log("🚀 ~ Truth prompt selected with content:", payload.content);
                     }
                 });
@@ -268,6 +293,8 @@ const PixiRoomPage = () => {
                         setSelectedPrompt("trick");
                         setPromptContent(payload.content || null);
                         // Don't hide prompt selection - wait for END_TURN event
+                        usePopupStore.getState().closePopup(EPopupName.TowCard);
+                        usePopupStore.getState().openPopup(EPopupName.CardSelectedPopup);
                         console.log("🚀 ~ Trick prompt selected with content:", payload.content);
                     }
                 });
@@ -284,6 +311,9 @@ const PixiRoomPage = () => {
                     setSelectedPlayer(null); // Clear selected player
                     setShowSelectedPlayerPopup(false); // Hide selected player popup
                     setShowPromptSelection(false); // Close the prompt selection popup
+
+                    usePopupStore.getState().closePopup(EPopupName.TowCard);
+                    usePopupStore.getState().closePopup(EPopupName.CardSelectedPopup);
                     console.log("🚀 ~ END_TURN received from server - popup closed and states reset");
                 });
 
@@ -294,6 +324,7 @@ const PixiRoomPage = () => {
 
                     // Hide selected player popup without affecting selectedPlayer state
                     setShowSelectedPlayerPopup(false);
+                    usePopupStore.getState().closePopup(EPopupName.CardPlayerSelectedPopup);
 
                     console.log("🚀 ~ Selected player popup hidden");
                 });
@@ -302,6 +333,8 @@ const PixiRoomPage = () => {
                 connectedRoom.onMessage(SocketEnum.END_GAME, (message: unknown) => {
                     console.log("🚀 ~ END_GAME received:", message);
                     setGameEnded(true);
+                    usePopupStore.getState().closePopup(EPopupName.TowCard);
+                    usePopupStore.getState().closePopup(EPopupName.CardSelectedPopup);
                     console.log("🚀 ~ Game ended, showing restart button for clients");
                 });
 
@@ -312,8 +345,8 @@ const PixiRoomPage = () => {
                     if (state.players && Array.isArray(state.players)) {
                         setRoomState({
                             players: state.players,
-                            meta: state.meta || {},
-                            hostId: state.hostId || ""
+                            state: state.state || RoomState.READY,
+                            roomId: state.roomId || "",
                         });
                     }
 
@@ -322,8 +355,8 @@ const PixiRoomPage = () => {
                         if (state.players && Array.isArray(state.players)) {
                             setRoomState({
                                 players: state.players,
-                                meta: state.meta || {},
-                                hostId: state.hostId || ""
+                                state: state.state || RoomState.READY,
+                                roomId: state.roomId || "",
                             });
                         }
                     });
@@ -421,7 +454,9 @@ const PixiRoomPage = () => {
     const handleUpdateProfile = (profile: { name: string; avatar: string }) => {
         if (room) {
             room.send(SocketEnum.UPDATE_PROFILE, profile);
+
             console.log("🚀 ~ handleUpdateProfile ~ Profile sent:", profile);
+            usePopupStore.getState().closePopup(EPopupName.TowCard);
         }
     };
 
@@ -486,7 +521,24 @@ const PixiRoomPage = () => {
     // Render based on whether user is host or client
     if (isHost) {
         return (
-            <HostColyseusView
+
+            <>
+                <AnimatePresence>
+                    {activePopup === EPopupName.TowCard && <TowCard />}
+                    {activePopup === EPopupName.CountdownPopup && <CountdownPopup show={true} onComplete={() => {   usePopupStore.getState().closePopup(EPopupName.CountdownPopup);}} duration={3} startNumber={3} />}
+                    {activePopup === EPopupName.CardSelectedPopup && <CardSelectedPopup selectedPrompt={selectedPrompt} promptContent={promptContent} />}
+                    {activePopup === EPopupName.CardPlayerSelectedPopup && <CardPlayerSelectedPopup selectedPlayer={selectedPlayer} />}
+                </AnimatePresence>
+
+                <HostView
+                    me={me}
+                    roomUrl={roomUrl}
+                    roomState={roomState}
+                    controller={usePopupStore}
+                    spin={{playerId: spinningPlayerId}}
+                />
+
+                {/* <HostColyseusView
                 roomState={roomState}
                 me={me}
                 selected={selected}
@@ -511,11 +563,13 @@ const PixiRoomPage = () => {
                 showPromptSelection={showPromptSelection}
                 selectedPrompt={selectedPrompt}
                 promptContent={promptContent}
-                showTurnCountdown={showTurnCountdown}
+                showTurnCountdown={false}
                 onTurnCountdownComplete={handleTurnCountdownComplete}
                 onPromptSelected={handlePromptSelected}
                 gameEnded={gameEnded}
-            />
+            /> */}
+            </>
+
         );
     } else {
         // Client view

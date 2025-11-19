@@ -84,26 +84,26 @@ const HostView = ({
         const status = player.data?.status as string | undefined;
         return status !== "completed";
     });
-    
+
     // Danh sách người đã chơi (completed)
     const completedPlayers = roomState.players.filter((player) => {
         if (player.id === me.id) return false;
         const status = player.data?.status as string | undefined;
         return status === "completed";
     });
-    
+
     const activePlayer = selected?.player ?? null;
 
     // Lấy thông tin thẻ bài từ selected player
     const truthOption = selected?.promptOptions?.truth;
     const trickOption = selected?.promptOptions?.trick;
-    
+
     // State để quản lý popup chúc mừng sau khi bánh xe quay xong
     const [showCelebrationPopup, setShowCelebrationPopup] = useState(false);
     const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hidePopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasShownPopupRef = useRef<string | null>(null); // Track player đã hiện popup
-    
+
     // Logic đơn giản:
     // Khi có activePlayer mới và đang spinning → sau 7s hiện popup chúc mừng và thẻ bài
     // Sau 10s (7s quay + 3s popup) → ẩn popup, thẻ bài vẫn hiện
@@ -121,7 +121,7 @@ const HostView = ({
             hasShownPopupRef.current = null;
             return;
         }
-        
+
         // Nếu đã hiện popup cho player này rồi, không hiện lại
         if (hasShownPopupRef.current === activePlayer.id) {
             console.log("🚀 ~ HostView ~ Đã hiện popup cho player này rồi, skip");
@@ -129,16 +129,16 @@ const HostView = ({
 
             return;
         }
-        
+
         // Chỉ bắt đầu timer khi đang spinning và chưa có timer nào đang chạy
         // Và popup chưa đang hiện
         if (!isSpinning || popupTimerRef.current || showCelebrationPopup) {
             console.log("🚀 ~ HostView ~ Điều kiện không đủ:", { isSpinning, hasTimer: !!popupTimerRef.current, showPopup: showCelebrationPopup });
             return;
         }
-        
+
         console.log("🚀 ~ HostView ~ Bắt đầu timer popup cho player:", activePlayer.id);
-        
+
         // Sau 7s (thời gian bánh xe quay), hiện popup chúc mừng
         const popupTimer = setTimeout(() => {
             console.log("🚀 ~ HostView ~ Hiện popup chúc mừng");
@@ -147,7 +147,7 @@ const HostView = ({
             hasShownPopupRef.current = activePlayer.id;
         }, 7000);
         popupTimerRef.current = popupTimer;
-        
+
         // Sau 10s (7s quay + 3s popup), ẩn popup
         const hidePopupTimer = setTimeout(() => {
             console.log("🚀 ~ HostView ~ Ẩn popup chúc mừng");
@@ -155,7 +155,7 @@ const HostView = ({
             hidePopupTimerRef.current = null;
         }, 10000);
         hidePopupTimerRef.current = hidePopupTimer;
-        
+
         // Cleanup khi activePlayer hoặc isSpinning thay đổi
         return () => {
             console.log("🚀 ~ HostView ~ Cleanup timer");
@@ -170,7 +170,7 @@ const HostView = ({
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activePlayer?.id, isSpinning]);
-    
+
     // Khi turnFinished, reset popup và ref để có thể hiện lại ở turn tiếp theo
     useEffect(() => {
         if (turnFinished) {
@@ -186,7 +186,7 @@ const HostView = ({
             }
         }
     }, [turnFinished]);
-    
+
     // Logic đơn giản: chỉ dùng isSpinning
     // - isSpinning = true → hiện bánh xe, ẩn thẻ bài
     // - isSpinning = false → ẩn bánh xe, hiện thẻ bài (nếu có)
@@ -204,29 +204,28 @@ const HostView = ({
         const sizeClass = size === "lg" ? "w-20 h-20 text-5xl" : "w-10 h-10 text-2xl";
 
         if (emoji) {
-    return (
+            return (
                 <span className={`${baseClass} ${sizeClass}`} aria-label={displayName}>
                     {emoji}
-                    </span>
+                </span>
             );
         }
 
         return (
             <span
-                className={`${baseClass} ${
-                    size === "lg" ? "w-20 h-20 text-3xl font-black" : "w-10 h-10 text-lg font-bold"
-                }`}
+                className={`${baseClass} ${size === "lg" ? "w-20 h-20 text-3xl font-black" : "w-10 h-10 text-lg font-bold"
+                    }`}
                 aria-label={displayName}
             >
                 {fallbackInitial}
-                            </span>
+            </span>
         );
     };    // Component popup chúc mừng với animation pháo
     const CelebrationPopup = ({ player }: { player: PlayerInfo }) => {
         const playerName = player.data?.name ?? "Player";
         const avatarId = player.data?.avatar as string;
         const emoji = avatarId ? AVATAR_EMOJI[avatarId] : undefined;
-        
+
         return (
             <AnimatePresence>
                 {showCelebrationPopup ? (
@@ -240,7 +239,7 @@ const HostView = ({
                     >
                         {/* Background overlay */}
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-                        
+
                         {/* Pháo chúc mừng */}
                         <div className="absolute inset-0 overflow-hidden">
                             {[...Array(20)].map((_, i) => (
@@ -270,7 +269,7 @@ const HostView = ({
                                 />
                             ))}
                         </div>
-                        
+
                         {/* Popup nội dung */}
                         <motion.div
                             className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-yellow-400"
@@ -334,11 +333,11 @@ const HostView = ({
                                 className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6 shadow-lg"
                             >
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-2xl font-bold">Bánh xe quay</h3>
-                        </div>
+                                    {/* <h3 className="text-2xl font-bold">Bánh xe quay</h3> */}
+                                </div>
                                 <div className="flex-1 flex items-center justify-center overflow-hidden min-h-[400px]">
                                     <SpinningWheel players={participants} selectedPlayerId={isSpinning ? activePlayer?.id ?? null : null} />
-                    </div>
+                                </div>
                             </motion.div>
                         ) : null}
 
@@ -389,11 +388,10 @@ const HostView = ({
                                         return (
                                             <li
                                                 key={player.id}
-                                                className={`rounded-lg border p-4 transition ${
-                                                    isActive
+                                                className={`rounded-lg border p-4 transition ${isActive
                                                         ? "border-green-500 bg-green-50 dark:bg-green-900/20"
                                                         : "border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     {renderAvatar(player)}
@@ -404,8 +402,8 @@ const HostView = ({
                                                         {isActive && (
                                                             <p className="text-xs text-green-600 dark:text-green-400">
                                                                 Đang chơi
-                    </p>
-                )}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </li>
@@ -421,22 +419,22 @@ const HostView = ({
                                 <h3 className="text-2xl font-bold mb-4">Đã chơi</h3>
                                 <ul className="space-y-3 max-h-[200px] overflow-y-auto">
                                     {completedPlayers.map((player) => (
-                                <li
-                                    key={player.id}
+                                        <li
+                                            key={player.id}
                                             className="rounded-lg border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-800/50 opacity-60 p-4"
-                                >
+                                        >
                                             <div className="flex items-center gap-3">
                                                 {renderAvatar(player)}
                                                 <div className="flex-1">
                                                     <p className="font-medium text-neutral-600 dark:text-neutral-400">
-                                        {player.data?.name ?? "Unnamed Player"}
-                                    </p>
+                                                        {player.data?.name ?? "Unnamed Player"}
+                                                    </p>
                                                     <p className="text-xs text-neutral-500">Đã hoàn thành</p>
                                                 </div>
                                             </div>
-                                </li>
-                            ))}
-                        </ul>
+                                        </li>
+                                    ))}
+                                </ul>
                             </aside>
                         )}
                     </div>
@@ -505,11 +503,10 @@ const HostView = ({
                                 return (
                                     <li
                                         key={player.id}
-                                        className={`rounded-lg border p-4 transition ${
-                                            isActive
+                                        className={`rounded-lg border p-4 transition ${isActive
                                                 ? "border-green-500 bg-green-50 dark:bg-green-900/20"
                                                 : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             {renderAvatar(player)}
@@ -523,7 +520,7 @@ const HostView = ({
                                                     </p>
                                                 )}
                                             </div>
-                    </div>
+                                        </div>
                                     </li>
                                 );
                             })}
